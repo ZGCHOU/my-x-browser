@@ -3,80 +3,127 @@ import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QListWidget, QLabel, QLineEdit, QTextEdit,
                              QDialog, QFormLayout, QMessageBox, QListWidgetItem, QSplitter,
-                             QCheckBox, QGroupBox, QShortcut)
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QIcon, QKeySequence
+                             QCheckBox, QGroupBox, QShortcut, QFrame, QScrollArea)
+from PyQt5.QtCore import Qt, QTimer, QSize
+from PyQt5.QtGui import QIcon, QKeySequence, QFont, QFontDatabase
 
 from manager.core.account_manager import AccountManager, Account
 from manager.core.browser_manager import BrowserManager
 from manager.core.window_manager import WindowManager, WindowInfo
+from manager.gui.styles import get_main_stylesheet, get_window_manager_stylesheet
 
 
 class AddAccountDialog(QDialog):
-    """添加/编辑账号对话框"""
+    """添加/编辑账号对话框 - 现代化样式"""
     def __init__(self, parent=None, account=None, default_proxy=""):
         super().__init__(parent)
         self.account = account
         self.setModal(True)
-        self.resize(450, 350)
+        self.resize(680, 640)
+        self.setStyleSheet(get_main_stylesheet())
 
         if account:
             self.setWindowTitle("编辑账号")
         else:
             self.setWindowTitle("添加新账号")
 
-        layout = QFormLayout()
+        # 主布局
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(24)
+        main_layout.setContentsMargins(40, 40, 40, 40)
 
+        # 标题
+        title = QLabel(f"{'编辑' if account else '新建'}账号")
+        title.setStyleSheet("font-size: 32px; font-weight: bold; color: #3b82f6; margin-bottom: 12px;")
+        main_layout.addWidget(title)
+
+        # 副标题
+        subtitle = QLabel("配置账号的浏览器环境")
+        subtitle.setStyleSheet("color: #64748b; font-size: 18px; margin-bottom: 24px;")
+        main_layout.addWidget(subtitle)
+
+        # 表单区域
+        form_widget = QWidget()
+        form_widget.setStyleSheet("background-color: #151b2b; border-radius: 20px; padding: 12px;")
+        form_layout = QVBoxLayout(form_widget)
+        form_layout.setSpacing(20)
+        form_layout.setContentsMargins(32, 32, 32, 32)
+
+        # 账号名称
+        name_label = QLabel("账号名称 *")
+        name_label.setStyleSheet("color: #94a3b8; font-weight: 600;")
+        form_layout.addWidget(name_label)
+        
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("例如: Twitter_Account_1")
+        form_layout.addWidget(self.name_input)
 
+        # 启动URL
+        url_label = QLabel("启动 URL *")
+        url_label.setStyleSheet("color: #94a3b8; font-weight: 600;")
+        form_layout.addWidget(url_label)
+        
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("例如: https://x.com/home")
+        form_layout.addWidget(self.url_input)
 
+        # 代理地址
+        proxy_label = QLabel("代理地址")
+        proxy_label.setStyleSheet("color: #94a3b8; font-weight: 600;")
+        form_layout.addWidget(proxy_label)
+        
         self.proxy_input = QLineEdit()
-        self.proxy_input.setPlaceholderText("例如: http://127.0.0.1:7897 (留空则不使用代理)")
+        self.proxy_input.setPlaceholderText("http://127.0.0.1:7897 (留空则直连)")
+        form_layout.addWidget(self.proxy_input)
 
+        # 代理提示
+        proxy_hint = QLabel("支持 HTTP / SOCKS5 代理格式")
+        proxy_hint.setStyleSheet("color: #64748b; padding: 4px 0;")
+        form_layout.addWidget(proxy_hint)
+
+        # 备注
+        notes_label = QLabel("备注")
+        notes_label.setStyleSheet("color: #94a3b8; font-weight: 600;")
+        form_layout.addWidget(notes_label)
+        
         self.notes_input = QTextEdit()
-        self.notes_input.setPlaceholderText("备注信息 (可选)")
-        self.notes_input.setMaximumHeight(80)
+        self.notes_input.setPlaceholderText("可选的备注信息...")
+        self.notes_input.setMaximumHeight(100)
+        form_layout.addWidget(self.notes_input)
+
+        main_layout.addWidget(form_widget)
 
         # 如果是编辑模式，填充现有数据
         if account:
             self.name_input.setText(account.name)
-            self.name_input.setEnabled(False)  # 不允许修改账号名
+            self.name_input.setEnabled(False)
+            self.name_input.setStyleSheet("background-color: #334155; color: #64748b;")
             self.url_input.setText(account.url or "https://www.google.com")
             self.proxy_input.setText(account.proxy or "")
             self.notes_input.setText(account.notes or "")
         else:
-            # 新建时使用默认代理
             self.url_input.setText("https://www.google.com")
             if default_proxy:
                 self.proxy_input.setText(default_proxy)
 
-        layout.addRow("账号名称*:", self.name_input)
-        layout.addRow("启动URL*:", self.url_input)
-        layout.addRow("代理地址:", self.proxy_input)
-
-        # 添加代理说明
-        proxy_hint = QLabel("💡 支持 http/socks5 代理，例如:\n   http://127.0.0.1:7897\n   socks5://127.0.0.1:1080")
-        proxy_hint.setStyleSheet("color: #666; font-size: 11px;")
-        layout.addRow("", proxy_hint)
-
-        layout.addRow("备注:", self.notes_input)
-
-        # 按钮
+        # 按钮区域
         btn_layout = QHBoxLayout()
-        self.ok_btn = QPushButton("确定")
+        btn_layout.setSpacing(16)
+        
         self.cancel_btn = QPushButton("取消")
-
-        self.ok_btn.clicked.connect(self.accept)
+        self.cancel_btn.setObjectName("secondary_btn")
         self.cancel_btn.clicked.connect(self.reject)
-
-        btn_layout.addWidget(self.ok_btn)
+        
+        self.ok_btn = QPushButton("保存")
+        self.ok_btn.setObjectName("success_btn")
+        self.ok_btn.clicked.connect(self.accept)
+        
+        btn_layout.addStretch()
         btn_layout.addWidget(self.cancel_btn)
+        btn_layout.addWidget(self.ok_btn)
 
-        layout.addRow(btn_layout)
-        self.setLayout(layout)
+        main_layout.addLayout(btn_layout)
+        self.setLayout(main_layout)
 
     def get_data(self):
         """获取输入数据"""
@@ -89,14 +136,17 @@ class AddAccountDialog(QDialog):
 
 
 class WindowManagerDialog(QDialog):
-    """窗口管理器对话框"""
+    """窗口管理器对话框 - 现代化样式"""
     def __init__(self, parent=None, browser_manager=None, window_manager=None):
         super().__init__(parent)
         self.browser_manager = browser_manager
         self.window_manager = window_manager
-        self.setWindowTitle("🪟 窗口管理器")
-        self.resize(500, 400)
-        self.setModal(False)  # 非模态，可以同时操作
+        self.setWindowTitle("窗口管理器")
+        self.resize(720, 600)
+        self.setModal(False)
+        
+        # 应用样式
+        self.setStyleSheet(get_window_manager_stylesheet())
         
         self.init_ui()
         self.refresh_window_list()
@@ -104,46 +154,84 @@ class WindowManagerDialog(QDialog):
         # 定时刷新
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh_window_list)
-        self.timer.start(2000)  # 每2秒刷新
+        self.timer.start(2000)
     
     def init_ui(self):
         """初始化UI"""
         layout = QVBoxLayout()
+        layout.setSpacing(24)
+        layout.setContentsMargins(32, 32, 32, 32)
         
-        # 标题
-        title = QLabel("🪟 运行中的浏览器窗口")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        layout.addWidget(title)
+        # 标题栏
+        header = QWidget()
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 窗口列表
+        title_text = QLabel("窗口管理器")
+        title_text.setStyleSheet("font-size: 32px; font-weight: bold; color: #3b82f6;")
+        
+        header_layout.addWidget(title_text)
+        header_layout.addStretch()
+        
+        layout.addWidget(header)
+        
+        # 窗口列表卡片
+        list_card = QWidget()
+        list_card.setStyleSheet("""
+            QWidget {
+                background-color: #151b2b;
+                border-radius: 20px;
+                border: 2px solid #2d3748;
+            }
+        """)
+        list_layout = QVBoxLayout(list_card)
+        list_layout.setContentsMargins(28, 28, 28, 28)
+        
+        list_title = QLabel("运行中的浏览器窗口")
+        list_title.setStyleSheet("color: #94a3b8; font-weight: 600; font-size: 20px;")
+        list_layout.addWidget(list_title)
+        
         self.window_list = QListWidget()
+        self.window_list.setMinimumHeight(220)
         self.window_list.itemClicked.connect(self.on_window_selected)
-        layout.addWidget(self.window_list)
+        list_layout.addWidget(self.window_list)
+        
+        layout.addWidget(list_card)
         
         # 快速操作按钮组
-        quick_ops = QGroupBox("⚡ 快速操作")
-        quick_layout = QHBoxLayout()
+        ops_card = QWidget()
+        ops_card.setStyleSheet("""
+            QWidget {
+                background-color: #151b2b;
+                border-radius: 20px;
+                border: 2px solid #2d3748;
+            }
+        """)
+        ops_layout = QHBoxLayout(ops_card)
+        ops_layout.setSpacing(20)
+        ops_layout.setContentsMargins(28, 28, 28, 28)
         
-        self.focus_btn = QPushButton("👁️ 聚焦窗口")
+        self.focus_btn = QPushButton("聚焦窗口")
         self.focus_btn.clicked.connect(self.focus_selected_window)
         self.focus_btn.setEnabled(False)
         
-        self.minimize_btn = QPushButton("🗕️ 最小化")
+        self.minimize_btn = QPushButton("最小化全部")
+        self.minimize_btn.setObjectName("secondary_btn")
         self.minimize_btn.clicked.connect(self.minimize_all)
         
-        quick_layout.addWidget(self.focus_btn)
-        quick_layout.addWidget(self.minimize_btn)
-        quick_ops.setLayout(quick_layout)
-        layout.addWidget(quick_ops)
+        ops_layout.addWidget(self.focus_btn)
+        ops_layout.addWidget(self.minimize_btn)
+        layout.addWidget(ops_card)
         
         # 提示信息
-        hint = QLabel("💡 提示：点击列表中的窗口可以聚焦到该窗口\n"
-                     "快捷键: Ctrl+1~9 快速切换到对应账号")
-        hint.setStyleSheet("color: #666; font-size: 11px;")
+        hint = QLabel("点击窗口列表选择目标 · 快捷键 Ctrl+1~9 快速切换")
+        hint.setStyleSheet("color: #64748b; font-size: 16px;")
+        hint.setAlignment(Qt.AlignCenter)
         layout.addWidget(hint)
         
         # 关闭按钮
         close_btn = QPushButton("关闭")
+        close_btn.setObjectName("close_btn")
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
         
@@ -209,11 +297,11 @@ class WindowManagerDialog(QDialog):
         # 显示到列表
         for name, data in sorted(merged.items()):
             if data['status'] == 'running+detected':
-                text = f"🟢 [{name}] - {data['title'][:30] if data['title'] else '运行中'}"
+                text = f"● [{name}] - {data['title'][:30] if data['title'] else '运行中'}"
             elif data['status'] == 'detected':
-                text = f"🟡 [{name}] - {data['title'][:30] if data['title'] else '已检测'}"
+                text = f"◐ [{name}] - {data['title'][:30] if data['title'] else '已检测'}"
             else:
-                text = f"⚪ [{name}] - 运行中(未检测到窗口)"
+                text = f"○ [{name}] - 运行中(未检测到窗口)"
             
             item = QListWidgetItem(text)
             item.setData(Qt.UserRole, data)
@@ -297,11 +385,15 @@ class WindowManagerDialog(QDialog):
 
 
 class MainWindow(QMainWindow):
-    """主窗口"""
+    """主窗口 - 现代化多账号管理平台"""
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Camoufox 多账号管理平台")
-        self.resize(900, 600)
+        self.resize(1400, 900)
+        self.setMinimumSize(1200, 800)
+        
+        # 应用样式表
+        self.setStyleSheet(get_main_stylesheet())
 
         # 初始化管理器
         self.account_manager = AccountManager()
@@ -329,140 +421,231 @@ class MainWindow(QMainWindow):
         self.setup_shortcuts()
 
     def init_ui(self):
-        """初始化UI"""
+        """初始化现代化 UI"""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         main_layout = QVBoxLayout()
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 顶部：全局设置栏
+        # ===== 顶部工具栏 =====
         top_bar = QWidget()
-        top_layout = QHBoxLayout()
-        top_layout.setContentsMargins(10, 5, 10, 5)
+        top_bar.setObjectName("top_bar")
+        top_layout = QHBoxLayout(top_bar)
+        top_layout.setContentsMargins(20, 12, 20, 12)
+        top_layout.setSpacing(16)
 
-        proxy_label = QLabel("默认代理:")
+        # Logo 和标题
+        logo_layout = QHBoxLayout()
+        logo_text = QLabel("Camoufox 多账号管理")
+        logo_text.setStyleSheet("font-size: 24px; font-weight: bold; color: #2563eb;")
+        logo_layout.addWidget(logo_text)
+        logo_layout.addSpacing(30)
+
+        # 默认代理设置
         self.global_proxy_input = QLineEdit()
-        self.global_proxy_input.setPlaceholderText("例如: http://127.0.0.1:7897 (新建账号时自动填充)")
+        self.global_proxy_input.setPlaceholderText("默认代理: http://127.0.0.1:7897")
         self.global_proxy_input.setMinimumWidth(300)
+        self.global_proxy_input.setMaximumWidth(450)
         self.global_proxy_input.textChanged.connect(self.on_global_proxy_changed)
 
-        top_layout.addWidget(proxy_label)
+        top_layout.addLayout(logo_layout)
+        top_layout.addWidget(QLabel("全局代理:"))
         top_layout.addWidget(self.global_proxy_input)
         top_layout.addStretch()
 
-        top_bar.setLayout(top_layout)
-        top_bar.setStyleSheet("background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;")
+        # ===== 主内容区 =====
+        content_widget = QWidget()
+        content_widget.setStyleSheet("background-color: #0b0f19; padding: 24px;")
+        content_layout = QHBoxLayout(content_widget)
+        content_layout.setSpacing(24)
+        content_layout.setContentsMargins(24, 24, 24, 24)
 
-        # 中间：主内容区
-        content_layout = QHBoxLayout()
+        # ===== 左侧面板 =====
+        left_card = QWidget()
+        left_card.setStyleSheet("""
+            QWidget {
+                background-color: #151b2b;
+                border-radius: 20px;
+                border: 2px solid #2d3748;
+            }
+        """)
+        left_layout = QVBoxLayout(left_card)
+        left_layout.setSpacing(20)
+        left_layout.setContentsMargins(28, 28, 28, 28)
 
-        # 左侧：账号列表
-        left_panel = QWidget()
-        left_layout = QVBoxLayout()
-
-        # 标题和按钮
-        title_layout = QHBoxLayout()
-        title_label = QLabel("账号列表")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
-
+        # 左侧标题栏
+        left_header = QHBoxLayout()
+        left_title = QLabel("账号列表")
+        left_title.setStyleSheet("font-size: 24px; font-weight: bold; color: #f8fafc;")
+        
         self.add_btn = QPushButton("+ 添加账号")
+        self.add_btn.setObjectName("success_btn")
         self.add_btn.clicked.connect(self.add_account)
 
-        title_layout.addWidget(title_label)
-        title_layout.addStretch()
-        title_layout.addWidget(self.add_btn)
+        left_header.addWidget(left_title)
+        left_header.addStretch()
+        left_header.addWidget(self.add_btn)
+        left_layout.addLayout(left_header)
 
         # 账号列表
         self.account_list = QListWidget()
+        self.account_list.setMinimumWidth(300)
         self.account_list.itemClicked.connect(self.on_account_selected)
-
-        left_layout.addLayout(title_layout)
         left_layout.addWidget(self.account_list)
 
-        left_panel.setLayout(left_layout)
+        # ===== 右侧面板 =====
+        right_card = QWidget()
+        right_card.setStyleSheet("""
+            QWidget {
+                background-color: #151b2b;
+                border-radius: 20px;
+                border: 2px solid #2d3748;
+            }
+        """)
+        right_layout = QVBoxLayout(right_card)
+        right_layout.setSpacing(24)
+        right_layout.setContentsMargins(32, 32, 32, 32)
 
-        # 右侧：账号详情和操作
-        right_panel = QWidget()
-        right_layout = QVBoxLayout()
+        # 右侧标题
+        right_title = QLabel("账号详情")
+        right_title.setStyleSheet("font-size: 24px; font-weight: bold; color: #f8fafc;")
+        right_layout.addWidget(right_title)
 
-        # 账号信息
-        info_label = QLabel("账号信息")
-        info_label.setStyleSheet("font-size: 16px; font-weight: bold;")
-
+        # 账号信息卡片
+        info_card = QWidget()
+        info_card.setStyleSheet("""
+            QWidget {
+                background-color: #0b0f19;
+                border-radius: 16px;
+                padding: 8px;
+            }
+        """)
+        info_layout = QVBoxLayout(info_card)
+        info_layout.setContentsMargins(24, 24, 24, 24)
+        
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
-        self.info_text.setMaximumHeight(200)
+        self.info_text.setStyleSheet("""
+            QTextEdit {
+                background-color: transparent;
+                border: none;
+                color: #cbd5e1;
+                line-height: 2;
+                font-size: 17px;
+            }
+        """)
+        self.info_text.setMaximumHeight(240)
+        info_layout.addWidget(self.info_text)
+        right_layout.addWidget(info_card)
 
-        # 操作按钮
-        btn_layout = QHBoxLayout()
-
-        self.start_btn = QPushButton("🚀 启动浏览器")
-        self.start_btn.clicked.connect(self.start_browser)
-        self.start_btn.setEnabled(False)
-
-        self.stop_btn = QPushButton("🛑 停止浏览器")
-        self.stop_btn.clicked.connect(self.stop_browser)
-        self.stop_btn.setEnabled(False)
-
-        self.edit_btn = QPushButton("✏️ 编辑账号")
-        self.edit_btn.clicked.connect(self.edit_account)
-        self.edit_btn.setEnabled(False)
-
-        self.delete_btn = QPushButton("🗑️ 删除账号")
-        self.delete_btn.clicked.connect(self.delete_account)
-        self.delete_btn.setEnabled(False)
-
-        btn_layout.addWidget(self.start_btn)
-        btn_layout.addWidget(self.stop_btn)
-        btn_layout.addWidget(self.edit_btn)
-        btn_layout.addWidget(self.delete_btn)
-        
-        # 窗口管理按钮
-        self.window_mgr_btn = QPushButton("🪟 窗口管理器")
-        self.window_mgr_btn.clicked.connect(self.open_window_manager)
-        self.window_mgr_btn.setToolTip("打开窗口管理面板，管理所有运行中的浏览器窗口")
-        btn_layout.addWidget(self.window_mgr_btn)
-
-        # 启动URL输入
-        url_layout = QHBoxLayout()
-        url_label = QLabel("启动URL:")
+        # 启动 URL 设置
+        url_group = QWidget()
+        url_layout = QHBoxLayout(url_group)
+        url_layout.setSpacing(16)
+        url_label = QLabel("启动 URL")
+        url_label.setStyleSheet("color: #94a3b8; font-weight: 600; min-width: 100px; font-size: 18px;")
         self.url_input = QLineEdit()
         self.url_input.setText("https://www.google.com")
         self.url_input.setPlaceholderText("浏览器启动后访问的网址")
-
+        
         url_layout.addWidget(url_label)
         url_layout.addWidget(self.url_input)
+        right_layout.addWidget(url_group)
 
-        # 临时禁用代理选项
+        # 代理选项
+        proxy_option = QWidget()
+        proxy_option_layout = QHBoxLayout(proxy_option)
         self.disable_proxy_checkbox = QCheckBox("临时禁用代理（直连模式）")
-        self.disable_proxy_checkbox.setToolTip("勾选后本次启动将忽略账号的代理设置")
+        self.disable_proxy_checkbox.setStyleSheet("color: #cbd5e1; font-size: 17px;")
+        proxy_option_layout.addWidget(self.disable_proxy_checkbox)
+        proxy_option_layout.addStretch()
+        right_layout.addWidget(proxy_option)
 
-        # 状态显示
-        self.status_label = QLabel("状态: 未选择账号")
-        self.status_label.setStyleSheet("padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
+        # 操作按钮区
+        btn_card = QWidget()
+        btn_card.setStyleSheet("""
+            QWidget {
+                background-color: #0b0f19;
+                border-radius: 16px;
+            }
+        """)
+        btn_layout = QHBoxLayout(btn_card)
+        btn_layout.setSpacing(16)
+        btn_layout.setContentsMargins(24, 24, 24, 24)
 
-        right_layout.addWidget(info_label)
-        right_layout.addWidget(self.info_text)
-        right_layout.addLayout(url_layout)
-        right_layout.addWidget(self.disable_proxy_checkbox)
-        right_layout.addLayout(btn_layout)
+        self.start_btn = QPushButton("启动浏览器")
+        self.start_btn.clicked.connect(self.start_browser)
+        self.start_btn.setEnabled(False)
+
+        self.stop_btn = QPushButton("停止")
+        self.stop_btn.clicked.connect(self.stop_browser)
+        self.stop_btn.setEnabled(False)
+        self.stop_btn.setObjectName("danger_btn")
+
+        self.edit_btn = QPushButton("编辑")
+        self.edit_btn.clicked.connect(self.edit_account)
+        self.edit_btn.setEnabled(False)
+        self.edit_btn.setObjectName("secondary_btn")
+
+        self.delete_btn = QPushButton("删除")
+        self.delete_btn.clicked.connect(self.delete_account)
+        self.delete_btn.setEnabled(False)
+        self.delete_btn.setObjectName("danger_btn")
+
+        self.window_mgr_btn = QPushButton("窗口管理")
+        self.window_mgr_btn.clicked.connect(self.open_window_manager)
+        self.window_mgr_btn.setToolTip("管理所有运行中的浏览器窗口")
+
+        btn_layout.addWidget(self.start_btn)
+        btn_layout.addWidget(self.stop_btn)
+        btn_layout.addStretch()
+        btn_layout.addWidget(self.edit_btn)
+        btn_layout.addWidget(self.delete_btn)
+        btn_layout.addWidget(self.window_mgr_btn)
+        right_layout.addWidget(btn_card)
+
+        # 状态栏
+        self.status_label = QLabel("未选择账号")
+        self.status_label.setObjectName("status_stopped")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("""
+            QLabel {
+                background: rgba(100, 116, 139, 0.15);
+                color: #94a3b8;
+                border-radius: 20px;
+                padding: 12px 24px;
+                font-weight: 600;
+                font-size: 14px;
+                border: 1px solid rgba(100, 116, 139, 0.3);
+            }
+        """)
         right_layout.addWidget(self.status_label)
         right_layout.addStretch()
 
-        right_panel.setLayout(right_layout)
-
-        # 使用分割器
+        # 分割器
         splitter = QSplitter(Qt.Horizontal)
-        splitter.addWidget(left_panel)
-        splitter.addWidget(right_panel)
+        splitter.addWidget(left_card)
+        splitter.addWidget(right_card)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 2)
+        splitter.setHandleWidth(4)
+        splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: #2d3748;
+                border-radius: 2px;
+            }
+            QSplitter::handle:hover {
+                background-color: #4b5563;
+            }
+        """)
 
         content_layout.addWidget(splitter)
 
         # 组装主布局
         main_layout.addWidget(top_bar)
-        main_layout.addLayout(content_layout)
+        main_layout.addWidget(content_widget)
         central_widget.setLayout(main_layout)
 
     def on_global_proxy_changed(self, text):
@@ -475,7 +658,9 @@ class MainWindow(QMainWindow):
         accounts = self.account_manager.get_all_accounts()
 
         for account in accounts:
-            item = QListWidgetItem(f"📁 {account.name}")
+            is_running = self.browser_manager.is_running(account.id)
+            status_text = "● " if is_running else "○ "
+            item = QListWidgetItem(f"{status_text}{account.name}")
             item.setData(Qt.UserRole, account.id)
             self.account_list.addItem(item)
 
@@ -558,23 +743,53 @@ class MainWindow(QMainWindow):
         account = self.account_manager.get_account(account_id)
 
         if account:
-            # 显示账号信息
-            info = f"账号名称: {account.name}\n"
-            info += f"ID: {account.id}\n"
-            info += f"启动URL: {account.url}\n"
-            info += f"配置目录: {account.profile_dir}\n"
-            info += f"代理: {account.proxy or '无'}\n"
-            info += f"备注: {account.notes or '无'}\n"
-            info += f"创建时间: {account.created_at}\n"
-            info += f"最后使用: {account.last_used or '从未使用'}"
-
-            self.info_text.setText(info)
+            is_running = self.browser_manager.is_running(account_id)
+            status_color = "#10b981" if is_running else "#64748b"
+            status_text = "运行中" if is_running else "未运行"
+            
+            # 使用 HTML 格式化信息显示
+            info_html = f"""
+            <table style="line-height: 1.8; color: #cbd5e1; width: 100%;">
+            <tr>
+                <td style="color: #64748b; width: 80px;">名称</td>
+                <td style="font-weight: 600; color: #f1f5f9; font-size: 16px;">{account.name}</td>
+            </tr>
+            <tr>
+                <td style="color: #64748b;">ID</td>
+                <td style="font-family: monospace; color: #94a3b8;">{account.id}</td>
+            </tr>
+            <tr>
+                <td style="color: #64748b;">启动URL</td>
+                <td><a href="{account.url}" style="color: #3b82f6; text-decoration: none;">{account.url}</a></td>
+            </tr>
+            <tr>
+                <td style="color: #64748b;">配置</td>
+                <td style="color: #94a3b8; font-size: 13px; word-break: break-all;">{account.profile_dir}</td>
+            </tr>
+            <tr>
+                <td style="color: #64748b;">代理</td>
+                <td style="color: {('#10b981' if account.proxy else '#64748b')};">
+                    {account.proxy or '直连模式'}
+                </td>
+            </tr>
+            {(account.notes and "<tr><td style='color: #64748b;'>备注</td><td style='color: #cbd5e1;'>" + account.notes + "</td></tr>") or ""}
+            <tr>
+                <td style="color: #64748b;">创建时间</td>
+                <td style="color: #94a3b8;">{account.created_at[:10]}</td>
+            </tr>
+            <tr>
+                <td style="color: #64748b;">最后使用</td>
+                <td style="color: {status_color}; font-weight: 600;">{account.last_used[:10] if account.last_used else '从未使用'}</td>
+            </tr>
+            </table>
+            """
+            
+            self.info_text.setHtml(info_html)
 
             # 自动填充URL输入框
             self.url_input.setText(account.url)
 
             # 更新按钮状态
-            is_running = self.browser_manager.is_running(account_id)
             self.start_btn.setEnabled(not is_running)
             self.stop_btn.setEnabled(is_running)
             self.edit_btn.setEnabled(not is_running)
@@ -664,11 +879,31 @@ class MainWindow(QMainWindow):
         is_running = self.browser_manager.is_running(account_id)
 
         if is_running:
-            self.status_label.setText(f"状态: 🟢 浏览器运行中 - {account.name}")
-            self.status_label.setStyleSheet("padding: 10px; background-color: #d4edda; border-radius: 5px; color: #155724;")
+            self.status_label.setText(f"● 浏览器运行中 · {account.name}")
+            self.status_label.setStyleSheet("""
+                QLabel {
+                    background: rgba(16, 185, 129, 0.15);
+                    color: #10b981;
+                    border-radius: 20px;
+                    padding: 14px 28px;
+                    font-weight: 600;
+                    font-size: 15px;
+                    border: 1px solid rgba(16, 185, 129, 0.3);
+                }
+            """)
         else:
-            self.status_label.setText(f"状态: ⚪ 浏览器未运行 - {account.name}")
-            self.status_label.setStyleSheet("padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
+            self.status_label.setText(f"○ 浏览器未运行 · {account.name}")
+            self.status_label.setStyleSheet("""
+                QLabel {
+                    background: rgba(100, 116, 139, 0.15);
+                    color: #94a3b8;
+                    border-radius: 20px;
+                    padding: 14px 28px;
+                    font-weight: 600;
+                    font-size: 15px;
+                    border: 1px solid rgba(100, 116, 139, 0.3);
+                }
+            """)
 
     def clear_info_panel(self):
         """清空信息面板"""
