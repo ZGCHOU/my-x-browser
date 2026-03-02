@@ -88,11 +88,13 @@ class AccountManager:
 
     def add_account(self, name: str, proxy: Optional[str] = None, notes: str = "", url: str = "https://www.google.com") -> Account:
         """添加新账号"""
-        # 自动生成 profile 目录
+        # 自动生成 profile 目录和状态文件路径
         profile_dir = os.path.abspath(f"./profiles/{name}")
         os.makedirs(profile_dir, exist_ok=True)
+        # storage_state 需要是 JSON 文件路径，不是目录
+        state_file = os.path.join(profile_dir, "state.json")
 
-        account = Account(name=name, profile_dir=profile_dir, proxy=proxy, notes=notes, url=url)
+        account = Account(name=name, profile_dir=state_file, proxy=proxy, notes=notes, url=url)
         self.accounts.append(account)
         self.save()
         return account

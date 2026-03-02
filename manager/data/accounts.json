@@ -2,17 +2,17 @@
   {
     "id": "b7853168",
     "name": "google",
-    "profile_dir": "/home/chenyi/code/camoufox/profiles/google",
+    "profile_dir": "/home/chenyi/code/camoufox/profiles/google/state.json",
     "proxy": "http://127.0.0.1:7897",
     "notes": "",
     "url": "https://www.google.com",
     "created_at": "2026-03-02T16:45:05.245029",
-    "last_used": "2026-03-02T17:09:24.768207"
+    "last_used": "2026-03-02T17:13:21.104554"
   },
   {
     "id": "348850a8",
     "name": "google2",
-    "profile_dir": "/home/chenyi/code/camoufox/profiles/google2",
+    "profile_dir": "/home/chenyi/code/camoufox/profiles/google2/state.json",
     "proxy": null,
     "notes": "",
     "url": "https://www.google.com",
@@ -22,7 +22,7 @@
   {
     "id": "87f8389e",
     "name": "google3",
-    "profile_dir": "/home/chenyi/code/camoufox/profiles/google3",
+    "profile_dir": "/home/chenyi/code/camoufox/profiles/google3/state.json",
     "proxy": "http://127.0.0.1:7897",
     "notes": "",
     "url": "https://www.google.com",
@@ -32,11 +32,11 @@
   {
     "id": "31dc7510",
     "name": "google4",
-    "profile_dir": "/home/chenyi/code/camoufox/profiles/google4",
+    "profile_dir": "/home/chenyi/code/camoufox/profiles/google4/state.json",
     "proxy": "http://127.0.0.1:7897",
     "notes": "",
     "url": "https://www.google.com",
     "created_at": "2026-03-02T16:56:56.125795",
-    "last_used": null
+    "last_used": "2026-03-02T17:14:29.375809"
   }
 ]
