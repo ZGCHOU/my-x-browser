@@ -6,7 +6,7 @@ import shutil
 ADDON_DIR = "/home/chenyi/.cache/camoufox/addons"
 expected = ["ublock", "canvasblocker", "fontblocker"]
 
-print("🧹 正在进行最后的目录净化...")
+print("🧹 正在进行最后的目录净化....")
 if os.path.exists(ADDON_DIR):
     for item in os.listdir(ADDON_DIR):
         item_path = os.path.join(ADDON_DIR, item)
