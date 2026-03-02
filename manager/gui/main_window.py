@@ -3,12 +3,13 @@ import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QListWidget, QLabel, QLineEdit, QTextEdit,
                              QDialog, QFormLayout, QMessageBox, QListWidgetItem, QSplitter,
-                             QCheckBox)
+                             QCheckBox, QGroupBox, QShortcut)
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QKeySequence
 
 from manager.core.account_manager import AccountManager, Account
 from manager.core.browser_manager import BrowserManager
+from manager.core.window_manager import WindowManager, WindowInfo
 
 
 class AddAccountDialog(QDialog):
@@ -87,6 +88,214 @@ class AddAccountDialog(QDialog):
         }
 
 
+class WindowManagerDialog(QDialog):
+    """窗口管理器对话框"""
+    def __init__(self, parent=None, browser_manager=None, window_manager=None):
+        super().__init__(parent)
+        self.browser_manager = browser_manager
+        self.window_manager = window_manager
+        self.setWindowTitle("🪟 窗口管理器")
+        self.resize(500, 400)
+        self.setModal(False)  # 非模态，可以同时操作
+        
+        self.init_ui()
+        self.refresh_window_list()
+        
+        # 定时刷新
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.refresh_window_list)
+        self.timer.start(2000)  # 每2秒刷新
+    
+    def init_ui(self):
+        """初始化UI"""
+        layout = QVBoxLayout()
+        
+        # 标题
+        title = QLabel("🪟 运行中的浏览器窗口")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        # 窗口列表
+        self.window_list = QListWidget()
+        self.window_list.itemClicked.connect(self.on_window_selected)
+        layout.addWidget(self.window_list)
+        
+        # 快速操作按钮组
+        quick_ops = QGroupBox("⚡ 快速操作")
+        quick_layout = QHBoxLayout()
+        
+        self.focus_btn = QPushButton("👁️ 聚焦窗口")
+        self.focus_btn.clicked.connect(self.focus_selected_window)
+        self.focus_btn.setEnabled(False)
+        
+        self.minimize_btn = QPushButton("🗕️ 最小化")
+        self.minimize_btn.clicked.connect(self.minimize_all)
+        
+        quick_layout.addWidget(self.focus_btn)
+        quick_layout.addWidget(self.minimize_btn)
+        quick_ops.setLayout(quick_layout)
+        layout.addWidget(quick_ops)
+        
+        # 提示信息
+        hint = QLabel("💡 提示：点击列表中的窗口可以聚焦到该窗口\n"
+                     "快捷键: Ctrl+1~9 快速切换到对应账号")
+        hint.setStyleSheet("color: #666; font-size: 11px;")
+        layout.addWidget(hint)
+        
+        # 关闭按钮
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+        
+        self.setLayout(layout)
+    
+    def refresh_window_list(self):
+        """刷新窗口列表"""
+        current_item = self.window_list.currentItem()
+        current_data = current_item.data(Qt.UserRole) if current_item else None
+        
+        self.window_list.clear()
+        
+        # 从 browser_manager 获取运行中的账号（优先使用已保存的 window_id）
+        running_accounts = {}
+        if self.browser_manager:
+            for account_id, ctx in self.browser_manager.contexts.items():
+                if ctx.is_running:
+                    running_accounts[ctx.account_name] = {
+                        'account_id': account_id,
+                        'account_name': ctx.account_name,
+                        'window_id': ctx.window_id  # 使用已保存的窗口 ID
+                    }
+        
+        # 尝试从系统获取窗口信息
+        detected_windows = []
+        if self.window_manager:
+            detected_windows = self.window_manager.list_windows()
+            print(f"检测到 {len(detected_windows)} 个浏览器窗口")
+            for w in detected_windows:
+                print(f"  - {w.window_id}: {w.title[:50]}")
+        
+        # 合并数据：优先使用系统检测到的窗口信息
+        merged = {}
+        
+        # 先添加系统检测到的窗口
+        for window in detected_windows:
+            if window.account_name:
+                merged[window.account_name] = {
+                    'account_id': None,
+                    'account_name': window.account_name,
+                    'window_id': window.window_id,
+                    'title': window.title,
+                    'status': 'detected'
+                }
+        
+        # 再添加 browser_manager 中的运行账号（优先保留系统检测到的 window_id）
+        for name, data in running_accounts.items():
+            if name in merged:
+                merged[name]['account_id'] = data['account_id']
+                merged[name]['status'] = 'running+detected'
+                # 如果 browser_manager 有 window_id 但系统检测没有，使用 browser_manager 的
+                if data['window_id'] and not merged[name].get('window_id'):
+                    merged[name]['window_id'] = data['window_id']
+            else:
+                merged[name] = {
+                    'account_id': data['account_id'],
+                    'account_name': name,
+                    'window_id': data['window_id'],  # 使用从 browser_manager 获取的 window_id
+                    'title': None,
+                    'status': 'running'
+                }
+        
+        # 显示到列表
+        for name, data in sorted(merged.items()):
+            if data['status'] == 'running+detected':
+                text = f"🟢 [{name}] - {data['title'][:30] if data['title'] else '运行中'}"
+            elif data['status'] == 'detected':
+                text = f"🟡 [{name}] - {data['title'][:30] if data['title'] else '已检测'}"
+            else:
+                text = f"⚪ [{name}] - 运行中(未检测到窗口)"
+            
+            item = QListWidgetItem(text)
+            item.setData(Qt.UserRole, data)
+            self.window_list.addItem(item)
+        
+        # 恢复选中状态
+        if current_data:
+            for i in range(self.window_list.count()):
+                item = self.window_list.item(i)
+                data = item.data(Qt.UserRole)
+                if data and data.get('account_name') == current_data.get('account_name'):
+                    self.window_list.setCurrentItem(item)
+                    break
+    
+    def on_window_selected(self, item):
+        """选中窗口时"""
+        self.focus_btn.setEnabled(True)
+    
+    def focus_selected_window(self):
+        """聚焦到选中的窗口"""
+        item = self.window_list.currentItem()
+        if not item:
+            QMessageBox.information(self, "提示", "请先选择一个窗口")
+            return
+        
+        data = item.data(Qt.UserRole)
+        if not data:
+            return
+        
+        account_name = data.get('account_name')
+        window_id = data.get('window_id')
+        
+        print(f"尝试聚焦: account={account_name}, window_id={window_id}")
+        
+        # 先尝试通过 window_id 聚焦
+        if window_id and self.window_manager:
+            print(f"使用 window_id 聚焦: {window_id}")
+            if self.window_manager.focus_window(window_id):
+                print("聚焦成功")
+                return
+            else:
+                print("通过 window_id 聚焦失败")
+        
+        # 如果失败，尝试通过账号名查找
+        if account_name and self.window_manager:
+            print(f"尝试通过账号名查找: {account_name}")
+            window = self.window_manager.get_window_by_account(account_name)
+            if window:
+                print(f"找到窗口: {window.window_id}, 尝试聚焦")
+                if self.window_manager.focus_window(window.window_id):
+                    print("聚焦成功")
+                    return
+            else:
+                print(f"未找到账号 '{account_name}' 的窗口")
+        
+        QMessageBox.warning(
+            self, 
+            "聚焦失败",
+            "无法聚焦到该窗口。可能原因：\n"
+            "1. 窗口已被关闭\n"
+            "2. xdotool 没有权限（Wayland 环境不支持）\n"
+            "3. 窗口 ID 无法获取"
+        )
+    
+    def minimize_all(self):
+        """最小化所有窗口"""
+        window_ids = []
+        for i in range(self.window_list.count()):
+            item = self.window_list.item(i)
+            data = item.data(Qt.UserRole)
+            if data and data.get('window_id'):
+                window_ids.append(data['window_id'])
+        
+        if window_ids and self.window_manager:
+            self.window_manager.minimize_all(window_ids)
+    
+    def closeEvent(self, event):
+        """关闭时停止定时器"""
+        self.timer.stop()
+        event.accept()
+
+
 class MainWindow(QMainWindow):
     """主窗口"""
     def __init__(self):
@@ -97,9 +306,13 @@ class MainWindow(QMainWindow):
         # 初始化管理器
         self.account_manager = AccountManager()
         self.browser_manager = BrowserManager()
+        self.window_manager = WindowManager()
 
         # 默认代理设置
         self.default_proxy = ""
+        
+        # 窗口管理器对话框
+        self.window_manager_dialog = None
 
         # 创建UI
         self.init_ui()
@@ -111,6 +324,9 @@ class MainWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_browser_status)
         self.timer.start(1000)  # 每秒更新一次
+        
+        # 设置快捷键
+        self.setup_shortcuts()
 
     def init_ui(self):
         """初始化UI"""
@@ -200,6 +416,12 @@ class MainWindow(QMainWindow):
         btn_layout.addWidget(self.stop_btn)
         btn_layout.addWidget(self.edit_btn)
         btn_layout.addWidget(self.delete_btn)
+        
+        # 窗口管理按钮
+        self.window_mgr_btn = QPushButton("🪟 窗口管理器")
+        self.window_mgr_btn.clicked.connect(self.open_window_manager)
+        self.window_mgr_btn.setToolTip("打开窗口管理面板，管理所有运行中的浏览器窗口")
+        btn_layout.addWidget(self.window_mgr_btn)
 
         # 启动URL输入
         url_layout = QHBoxLayout()
@@ -457,6 +679,66 @@ class MainWindow(QMainWindow):
         self.delete_btn.setEnabled(False)
         self.status_label.setText("状态: 未选择账号")
         self.status_label.setStyleSheet("padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
+
+    def setup_shortcuts(self):
+        """设置快捷键"""
+        # Ctrl+W 打开窗口管理器
+        shortcut = QShortcut(QKeySequence("Ctrl+W"), self)
+        shortcut.activated.connect(self.open_window_manager)
+        
+        # Ctrl+1~9 快速切换到对应账号（如果已启动）
+        for i in range(1, 10):
+            shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
+            shortcut.activated.connect(lambda checked, idx=i-1: self.quick_switch_account(idx))
+    
+    def open_window_manager(self):
+        """打开窗口管理器"""
+        import platform
+        
+        # 检查 xdotool 是否安装 (Linux)
+        if platform.system() == "Linux":
+            import shutil
+            if not shutil.which("xdotool"):
+                QMessageBox.warning(
+                    self,
+                    "缺少依赖",
+                    "窗口管理功能需要 xdotool\n\n"
+                    "请安装: sudo apt install xdotool"
+                )
+                return
+        elif platform.system() == "Darwin":
+            # macOS 提示
+            QMessageBox.information(
+                self, 
+                "macOS 权限提示",
+                "窗口管理功能需要辅助功能权限：\n\n"
+                "1. 系统偏好设置 → 安全性与隐私 → 辅助功能\n"
+                "2. 添加并勾选 '终端' 或 'Python'\n\n"
+                "如果没有权限，聚焦/排列窗口功能将无法使用。"
+            )
+        
+        if self.window_manager_dialog is None or not self.window_manager_dialog.isVisible():
+            self.window_manager_dialog = WindowManagerDialog(
+                self, 
+                browser_manager=self.browser_manager,
+                window_manager=self.window_manager
+            )
+            self.window_manager_dialog.show()
+        else:
+            self.window_manager_dialog.raise_()
+            self.window_manager_dialog.activateWindow()
+    
+    def quick_switch_account(self, index):
+        """快速切换到指定索引的账号窗口"""
+        accounts = self.account_manager.get_all_accounts()
+        if index < len(accounts):
+            account = accounts[index]
+            # 如果账号在运行，尝试聚焦到其窗口
+            if self.browser_manager.is_running(account.id):
+                window = self.window_manager.get_window_by_account(account.name)
+                if window:
+                    self.window_manager.focus_window(window.window_id)
+                    print(f"切换到账号: {account.name}")
 
     def closeEvent(self, event):
         """关闭窗口时"""

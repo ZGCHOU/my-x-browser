@@ -17,6 +17,7 @@ class BrowserContext:
         self.context = None
         self.page = None
         self.is_running = False
+        self.window_id: Optional[str] = None  # X11 窗口 ID，用于窗口管理
 
 
 class BrowserManager:
@@ -100,17 +101,38 @@ class BrowserManager:
             # 创建新标签页
             page = context.new_page()
 
-            # 设置页面标题（显示账号名）
-            page.evaluate(f"document.title = '[{account_name}] ' + document.title")
-
             # 访问指定URL
             page.goto(url, timeout=60000)
+            
+            # 页面加载完成后，设置标题（添加账号名前缀）
+            page.evaluate(f"""
+                (function() {{
+                    const accountName = '{account_name}';
+                    const originalTitle = document.title;
+                    const newTitle = '[' + accountName + '] ' + originalTitle;
+                    document.title = newTitle;
+                    
+                    // 监听标题变化，保持前缀
+                    const titleObserver = new MutationObserver(function(mutations) {{
+                        const currentTitle = document.title;
+                        if (!currentTitle.startsWith('[' + accountName + ']')) {{
+                            document.title = '[' + accountName + '] ' + currentTitle;
+                        }}
+                    }});
+                    
+                    const titleElement = document.querySelector('title');
+                    if (titleElement) {{
+                        titleObserver.observe(titleElement, {{ childList: true }});
+                    }}
+                }})();
+            """)
 
             # 保存上下文信息
             ctx = BrowserContext(account_id, account_name, profile_dir, proxy)
             ctx.context = context
             ctx.page = page
             ctx.is_running = True
+            ctx.window_id = None  # 稍后查找
             self.contexts[account_id] = ctx
 
             print(f"✅ 账号 [{account_name}] 已在新标签页中启动")
@@ -216,9 +238,76 @@ class BrowserManager:
         result = self._send_command(cmd)
         
         if result['success']:
+            # 异步查找窗口 ID（在新线程中，避免阻塞）
+            import threading
+            def find_window():
+                import time
+                time.sleep(2)  # 等待窗口创建
+                window_id = self._find_window_id(account_name)
+                if window_id and account_id in self.contexts:
+                    self.contexts[account_id].window_id = window_id
+                    print(f"🪟 检测到窗口 ID: {window_id}")
+            
+            threading.Thread(target=find_window, daemon=True).start()
             return True
         else:
             raise Exception(result.get('error', '未知错误'))
+
+    def _find_window_id(self, account_name: str) -> Optional[str]:
+        """通过标题查找窗口 ID"""
+        import subprocess
+        import time
+        
+        # 获取已被使用的窗口 ID，避免重复
+        used_window_ids = set()
+        for ctx in self.contexts.values():
+            if ctx.window_id:
+                used_window_ids.add(ctx.window_id)
+        
+        try:
+            # 方法1: 搜索标题以 [账号名] 开头的窗口（最精确）
+            result = subprocess.run(
+                ["xdotool", "search", "--name", f"[{account_name}]"],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                for window_id in result.stdout.strip().split("\n"):
+                    window_id = window_id.strip()
+                    if window_id and window_id not in used_window_ids:
+                        # 验证标题确实匹配这个账号
+                        title_result = subprocess.run(
+                            ["xdotool", "getwindowname", window_id],
+                            capture_output=True, text=True, timeout=2
+                        )
+                        title = title_result.stdout.strip()
+                        # 确保标题是 [账号名] 开头
+                        if title.startswith(f"[{account_name}]"):
+                            return window_id
+            
+            # 方法2: 搜索所有 Camoufox/Firefox 窗口，过滤标题
+            for class_name in ["camoufox-default", "Navigator", "firefox", "Firefox"]:
+                result = subprocess.run(
+                    ["xdotool", "search", "--class", class_name],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    for window_id in result.stdout.strip().split("\n"):
+                        window_id = window_id.strip()
+                        if not window_id or window_id in used_window_ids:
+                            continue
+                        
+                        title_result = subprocess.run(
+                            ["xdotool", "getwindowname", window_id],
+                            capture_output=True, text=True, timeout=2
+                        )
+                        title = title_result.stdout.strip()
+                        # 精确匹配：[账号名] 开头
+                        if title.startswith(f"[{account_name}]"):
+                            return window_id
+        except Exception as e:
+            print(f"查找窗口 ID 出错: {e}")
+        
+        return None
 
     def stop_browser(self, account_id: str):
         """停止指定账号的浏览器上下文"""
