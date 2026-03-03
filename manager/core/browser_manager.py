@@ -83,6 +83,7 @@ class BrowserManager:
             profile_dir = cmd['profile_dir']
             proxy = cmd['proxy']
             url = cmd['url']
+            window_size = cmd.get('window_size', None)  # 窗口大小配置
 
             # 准备代理配置
             proxy_config = None
@@ -92,14 +93,26 @@ class BrowserManager:
             else:
                 print(f"🌐 [{account_name}] 直连模式")
 
+            # 准备上下文配置
+            context_options = {
+                'storage_state': profile_dir if os.path.exists(profile_dir) else None,
+                'proxy': proxy_config
+            }
+            
+            # 如果指定了窗口大小，添加到上下文配置
+            if window_size:
+                context_options['viewport'] = window_size
+                print(f"📐 [{account_name}] 窗口大小: {window_size['width']}x{window_size['height']}")
+
             # 为该账号创建独立的上下文
-            context = self.browser.new_context(
-                storage_state=profile_dir if os.path.exists(profile_dir) else None,
-                proxy=proxy_config
-            )
+            context = self.browser.new_context(**context_options)
 
             # 创建新标签页
             page = context.new_page()
+            
+            # 如果指定了窗口大小，也设置页面视口
+            if window_size:
+                page.set_viewport_size(window_size)
 
             # 访问指定URL
             page.goto(url, timeout=60000)
@@ -216,8 +229,18 @@ class BrowserManager:
         raise Exception("命令执行超时")
 
     def start_browser(self, account_id: str, account_name: str, profile_dir: str,
-                     proxy: Optional[str] = None, url: str = "https://www.google.com"):
-        """为账号启动新的浏览器上下文（标签页）"""
+                     proxy: Optional[str] = None, url: str = "https://www.google.com",
+                     window_size: Optional[dict] = None):
+        """为账号启动新的浏览器上下文（标签页）
+        
+        Args:
+            account_id: 账号ID
+            account_name: 账号名称
+            profile_dir: 配置文件目录
+            proxy: 代理地址
+            url: 启动URL
+            window_size: 窗口大小，如 {'width': 1920, 'height': 1080}
+        """
         if account_id in self.contexts and self.contexts[account_id].is_running:
             print(f"账号 {account_name} 已在运行")
             return False
@@ -232,7 +255,8 @@ class BrowserManager:
             'account_name': account_name,
             'profile_dir': profile_dir,
             'proxy': proxy,
-            'url': url
+            'url': url,
+            'window_size': window_size
         }
         
         result = self._send_command(cmd)
