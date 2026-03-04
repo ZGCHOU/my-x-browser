@@ -2,8 +2,6 @@
 
 import sys
 import os
-from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
-from PyInstaller.building.api import BUNDLE
 
 # 检测平台
 is_windows = sys.platform.startswith('win')
