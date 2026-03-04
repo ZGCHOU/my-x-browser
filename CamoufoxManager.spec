@@ -10,26 +10,21 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('manager', 'manager')]
 
-# 收集 camoufox 数据
-try:
-    cf_datas, _, _ = collect_all('camoufox')
-    datas.extend(cf_datas)
-except:
-    pass
+# 收集所有 camoufox 相关依赖的数据文件
+packages_to_collect = [
+    'camoufox',
+    'browserforge', 
+    'apify_fingerprint_datapoints',
+    'language_tags',
+]
 
-# 收集 browserforge
-try:
-    bf_datas, _, _ = collect_all('browserforge')
-    datas.extend(bf_datas)
-except:
-    pass
-
-# 收集 apify_fingerprint_datapoints
-try:
-    af_datas, _, _ = collect_all('apify_fingerprint_datapoints')
-    datas.extend(af_datas)
-except:
-    pass
+for pkg in packages_to_collect:
+    try:
+        pkg_datas, _, _ = collect_all(pkg)
+        datas.extend(pkg_datas)
+        print(f"Collected {len(pkg_datas)} data files from {pkg}")
+    except Exception as e:
+        print(f"Warning: could not collect {pkg}: {e}")
 
 hiddenimports = [
     'PyQt5.sip',
@@ -42,6 +37,7 @@ hiddenimports = [
     'browserforge.headers',
     'browserforge.fingerprints',
     'apify_fingerprint_datapoints',
+    'language_tags',
 ]
 
 if is_windows:
