@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import sys
-import os
+from PyInstaller.building.build_main import Analysis, PYZ, EXE
 
 # 检测平台
 is_windows = sys.platform.startswith('win')
@@ -10,25 +10,18 @@ is_macos = sys.platform == 'darwin'
 # 基础配置
 block_cipher = None
 
-# 数据文件
-added_files = [
-    ('manager', 'manager'),
-]
+# 数据文件 - 使用 collect_all 来自动收集包数据
+from PyInstaller.utils.hooks import collect_all, collect_data_files
 
-# 尝试找到 browserforge 的数据文件
-try:
-    import browserforge
-    browserforge_path = os.path.dirname(browserforge.__file__)
-    # browserforge 的数据文件通常在包的子目录中
-    data_dir = os.path.join(browserforge_path, 'fingerprints', 'data')
-    if os.path.exists(data_dir):
-        added_files.append((data_dir, 'browserforge/fingerprints/data'))
-    # 还有 apify_fingerprint_datapoints 数据
-    apify_data = os.path.join(browserforge_path, '..', 'apify_fingerprint_datapoints', 'data')
-    if os.path.exists(apify_data):
-        added_files.append((apify_data, 'apify_fingerprint_datapoints/data'))
-except ImportError:
-    pass
+# 收集 browserforge 的所有数据
+browserforge_datas = collect_all('browserforge')
+
+# 基础数据文件
+datas = [('manager', 'manager')]
+
+# 添加 browserforge 的数据
+if browserforge_datas:
+    datas.extend(browserforge_datas[0])
 
 # 隐藏导入
 hiddenimports = [
@@ -50,7 +43,7 @@ a = Analysis(
     ['run_manager.py'],
     pathex=[],
     binaries=[],
-    datas=added_files,
+    datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
