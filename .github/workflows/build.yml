@@ -29,13 +29,7 @@ jobs:
     - name: Build with PyInstaller
       shell: bash
       run: |
-        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm \
-          --add-data "manager;manager" \
-          --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets \
-          --hidden-import=camoufox --hidden-import=camoufox.sync_api --hidden-import=pygetwindow \
-          --hidden-import=browserforge --hidden-import=browserforge.headers --hidden-import=browserforge.fingerprints \
-          --collect-data=browserforge \
-          run_manager.py
+        pyinstaller CamoufoxManager.spec --clean --noconfirm
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -66,13 +60,7 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm \
-          --add-data="manager:manager" \
-          --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets \
-          --hidden-import=camoufox --hidden-import=camoufox.sync_api \
-          --hidden-import=browserforge --hidden-import=browserforge.headers --hidden-import=browserforge.fingerprints \
-          --collect-data=browserforge \
-          run_manager.py
+        pyinstaller CamoufoxManager.spec --clean --noconfirm
     
     - name: Create portable package
       run: |
@@ -109,13 +97,7 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm \
-          --add-data="manager:manager" \
-          --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets \
-          --hidden-import=camoufox --hidden-import=camoufox.sync_api \
-          --hidden-import=browserforge --hidden-import=browserforge.headers --hidden-import=browserforge.fingerprints \
-          --collect-data=browserforge \
-          run_manager.py
+        pyinstaller CamoufoxManager.spec --clean --noconfirm
     
     - name: Create macOS app bundle
       run: |
