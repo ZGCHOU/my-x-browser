@@ -302,11 +302,6 @@ def get_main_stylesheet():
         color: {LIGHT_TEXT} !important;
     }}
 
-    QDialog QWidget {{
-        background-color: transparent;
-        color: {LIGHT_TEXT};
-    }}
-
     QMessageBox {{
         background-color: {LIGHT_BG};
     }}

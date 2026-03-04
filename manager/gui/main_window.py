@@ -23,8 +23,8 @@ class AddAccountDialog(QDialog):
         super().__init__(parent)
         self.account = account
         self.setModal(True)
-        self.setMinimumSize(800, 700)  # 响应式最小尺寸
-        self.resize(850, 750)
+        self.setMinimumSize(950, 800)  # 响应式最小尺寸
+        self.resize(1000, 850)
         self.setStyleSheet(get_main_stylesheet())
 
         if account:
@@ -65,52 +65,58 @@ class AddAccountDialog(QDialog):
             background-color: #fafbfc;
             border: 1px solid #dce1e8;
             border-radius: 12px;
-            padding: 12px;
         """)
         form_layout = QVBoxLayout(form_widget)
-        form_layout.setSpacing(16)
-        form_layout.setContentsMargins(28, 28, 28, 28)
+        form_layout.setSpacing(20)
+        form_layout.setContentsMargins(32, 32, 32, 32)
 
         # 账号名称
         name_label = QLabel("账号名称 *")
-        name_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px; margin-bottom: 8px;")
+        name_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px;")
         form_layout.addWidget(name_label)
 
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("例如: Twitter_Account_1")
+        self.name_input.setMinimumHeight(50)
         form_layout.addWidget(self.name_input)
 
         # 启动URL
+        form_layout.addSpacing(12)
         url_label = QLabel("启动 URL *")
-        url_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
+        url_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px;")
         form_layout.addWidget(url_label)
 
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("例如: https://x.com/home")
+        self.url_input.setMinimumHeight(50)
         form_layout.addWidget(self.url_input)
 
         # 代理地址
+        form_layout.addSpacing(12)
         proxy_label = QLabel("代理地址")
-        proxy_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
+        proxy_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px;")
         form_layout.addWidget(proxy_label)
 
         self.proxy_input = QLineEdit()
         self.proxy_input.setPlaceholderText("http://127.0.0.1:7897 (留空则直连)")
+        self.proxy_input.setMinimumHeight(50)
         form_layout.addWidget(self.proxy_input)
 
         # 代理提示
         proxy_hint = QLabel("支持 HTTP / SOCKS5 代理格式")
-        proxy_hint.setStyleSheet("color: #718096; padding: 8px 0; font-size: 18px;")
+        proxy_hint.setStyleSheet("color: #718096; font-size: 18px;")
         form_layout.addWidget(proxy_hint)
 
         # 备注
+        form_layout.addSpacing(12)
         notes_label = QLabel("备注")
-        notes_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
+        notes_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px;")
         form_layout.addWidget(notes_label)
 
         self.notes_input = QTextEdit()
         self.notes_input.setPlaceholderText("可选的备注信息...")
-        self.notes_input.setMaximumHeight(100)
+        self.notes_input.setMaximumHeight(120)
+        self.notes_input.setMinimumHeight(80)
         form_layout.addWidget(self.notes_input)
 
         main_layout.addWidget(form_widget)
@@ -1144,6 +1150,8 @@ def main():
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
+    # 延迟最大化，确保窗口管理器已处理 show 事件
+    QTimer.singleShot(100, window.showMaximized)
     sys.exit(app.exec_())
 
 
