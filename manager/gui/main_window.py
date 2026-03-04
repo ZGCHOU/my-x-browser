@@ -12,7 +12,7 @@ from manager.core.browser_manager import BrowserManager
 from manager.core.window_manager import WindowManager, WindowInfo
 from manager.gui.styles import (get_main_stylesheet, get_window_manager_stylesheet,
                                  LIGHT_BG, LIGHT_BG_SECONDARY, LIGHT_CARD, LIGHT_BORDER,
-                                 LIGHT_TEXT, LIGHT_TEXT_SECONDARY, LIGHT_TEXT_MUTED,
+                                 LIGHT_BORDER_LIGHT, LIGHT_TEXT, LIGHT_TEXT_SECONDARY, LIGHT_TEXT_MUTED,
                                  PRIMARY_COLOR, SUCCESS_COLOR, DANGER_COLOR,
                                  FONT_SMALL, FONT_NORMAL, FONT_LARGE, FONT_TITLE, FONT_HEADER)
 
@@ -54,7 +54,7 @@ class AddAccountDialog(QDialog):
 
         # 副标题
         subtitle = QLabel("配置独立的浏览器环境和代理设置")
-        subtitle.setStyleSheet("color: #4a5568; font-size: 22px; margin-bottom: 16px;")
+        subtitle.setStyleSheet("color: #1a202c; font-size: 22px; margin-bottom: 16px;")
         title_layout.addWidget(subtitle)
 
         main_layout.addWidget(title_container)
@@ -73,7 +73,7 @@ class AddAccountDialog(QDialog):
 
         # 账号名称
         name_label = QLabel("账号名称 *")
-        name_label.setStyleSheet("color: #4a5568; font-weight: 600; font-size: 20px; margin-bottom: 8px;")
+        name_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px; margin-bottom: 8px;")
         form_layout.addWidget(name_label)
 
         self.name_input = QLineEdit()
@@ -82,7 +82,7 @@ class AddAccountDialog(QDialog):
 
         # 启动URL
         url_label = QLabel("启动 URL *")
-        url_label.setStyleSheet("color: #4a5568; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
+        url_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
         form_layout.addWidget(url_label)
 
         self.url_input = QLineEdit()
@@ -91,7 +91,7 @@ class AddAccountDialog(QDialog):
 
         # 代理地址
         proxy_label = QLabel("代理地址")
-        proxy_label.setStyleSheet("color: #4a5568; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
+        proxy_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
         form_layout.addWidget(proxy_label)
 
         self.proxy_input = QLineEdit()
@@ -105,7 +105,7 @@ class AddAccountDialog(QDialog):
 
         # 备注
         notes_label = QLabel("备注")
-        notes_label.setStyleSheet("color: #4a5568; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
+        notes_label.setStyleSheet("color: #1a202c; font-weight: 600; font-size: 20px; margin-bottom: 8px; margin-top: 12px;")
         form_layout.addWidget(notes_label)
 
         self.notes_input = QTextEdit()
@@ -231,7 +231,7 @@ class WindowManagerDialog(QDialog):
         list_layout.setContentsMargins(24, 24, 24, 24)
 
         list_title = QLabel("运行中的浏览器窗口")
-        list_title.setStyleSheet(f"color: {LIGHT_TEXT_SECONDARY}; font-weight: 600; font-size: 22px; margin-bottom: 8px;")
+        list_title.setStyleSheet(f"color: {LIGHT_TEXT}; font-weight: 600; font-size: 22px; margin-bottom: 8px;")
         list_layout.addWidget(list_title)
 
         self.window_list = QListWidget()
@@ -505,7 +505,7 @@ class MainWindow(QMainWindow):
         proxy_layout.setSpacing(12)
 
         proxy_label = QLabel("全局代理")
-        proxy_label.setStyleSheet(f"color: {LIGHT_TEXT_SECONDARY}; font-weight: 600; font-size: 21px;")
+        proxy_label.setStyleSheet(f"color: {LIGHT_TEXT}; font-weight: 600; font-size: 21px;")
 
         self.global_proxy_input = QLineEdit()
         self.global_proxy_input.setPlaceholderText("http://127.0.0.1:7897")
@@ -529,8 +529,9 @@ class MainWindow(QMainWindow):
 
         # ===== 左侧面板 - 白色卡片 =====
         left_card = QWidget()
+        left_card.setObjectName("left_card")
         left_card.setStyleSheet(f"""
-            QWidget {{
+            QWidget#left_card {{
                 background-color: {LIGHT_CARD};
                 border: 1px solid {LIGHT_BORDER};
                 border-radius: 12px;
@@ -563,8 +564,9 @@ class MainWindow(QMainWindow):
 
         # ===== 右侧面板 - 白色卡片 =====
         right_card = QWidget()
+        right_card.setObjectName("right_card")
         right_card.setStyleSheet(f"""
-            QWidget {{
+            QWidget#right_card {{
                 background-color: {LIGHT_CARD};
                 border: 1px solid {LIGHT_BORDER};
                 border-radius: 12px;
@@ -598,12 +600,13 @@ class MainWindow(QMainWindow):
             QTextEdit {{
                 background-color: transparent;
                 border: none;
-                color: {LIGHT_TEXT_SECONDARY};
-                line-height: 2;
-                font-size: 21px;
+                color: {LIGHT_TEXT};
+                line-height: 1.8;
+                font-size: 20px;
             }}
         """)
-        self.info_text.setMaximumHeight(320)
+        self.info_text.setMinimumHeight(350)
+        self.info_text.setMaximumHeight(500)
         info_layout.addWidget(self.info_text)
         right_layout.addWidget(info_card)
 
@@ -612,7 +615,8 @@ class MainWindow(QMainWindow):
         url_layout = QHBoxLayout(url_group)
         url_layout.setSpacing(12)
         url_label = QLabel("启动 URL")
-        url_label.setStyleSheet(f"color: {LIGHT_TEXT_SECONDARY}; font-weight: 600; min-width: 120px; font-size: 21px;")
+        url_label.setStyleSheet(f"color: {LIGHT_TEXT}; font-weight: 600; font-size: 20px; background-color: transparent;")
+        url_label.setFixedWidth(110)
         self.url_input = QLineEdit()
         self.url_input.setText("https://www.google.com")
         self.url_input.setPlaceholderText("浏览器启动后访问的网址")
@@ -625,7 +629,7 @@ class MainWindow(QMainWindow):
         proxy_option = QWidget()
         proxy_option_layout = QHBoxLayout(proxy_option)
         self.disable_proxy_checkbox = QCheckBox("临时禁用代理（直连模式）")
-        self.disable_proxy_checkbox.setStyleSheet(f"color: {LIGHT_TEXT_SECONDARY}; font-size: 22px;")
+        self.disable_proxy_checkbox.setStyleSheet(f"color: {LIGHT_TEXT}; font-size: 20px;")
         proxy_option_layout.addWidget(self.disable_proxy_checkbox)
         proxy_option_layout.addStretch()
         right_layout.addWidget(proxy_option)
@@ -635,7 +639,8 @@ class MainWindow(QMainWindow):
         window_size_layout = QHBoxLayout(window_size_group)
         window_size_layout.setSpacing(12)
         window_size_label = QLabel("窗口大小")
-        window_size_label.setStyleSheet(f"color: {LIGHT_TEXT_SECONDARY}; font-weight: 600; min-width: 120px; font-size: 21px;")
+        window_size_label.setStyleSheet(f"color: {LIGHT_TEXT}; font-weight: 600; font-size: 20px; background-color: transparent;")
+        window_size_label.setFixedWidth(110)
         
         self.window_size_combo = QComboBox()
         self.window_size_combo.addItem("默认", None)
@@ -888,7 +893,7 @@ class MainWindow(QMainWindow):
             status_icon = "●" if is_running else "○"
 
             info_html = f"""
-            <div style="line-height: 2.2; color: #4a5568;">
+            <div style="line-height: 2.2; color: #1a202c;">
                 <table style="width: 100%; border-spacing: 0 10px;">
                     <tr>
                         <td style="color: #718096; width: 120px; padding: 8px 0; font-size: 19px;">名称</td>
@@ -916,7 +921,7 @@ class MainWindow(QMainWindow):
                             {('代理: ' + account.proxy) if account.proxy else '直连模式'}
                         </td>
                     </tr>
-                    {(account.notes and f"<tr><td style='color: #718096; padding: 8px 0; vertical-align: top; font-size: 19px;'>备注</td><td style='color: #4a5568; font-size: 19px;'>{account.notes}</td></tr>") or ""}
+                    {(account.notes and f"<tr><td style='color: #718096; padding: 8px 0; vertical-align: top; font-size: 19px;'>备注</td><td style='color: #1a202c; font-size: 19px;'>{account.notes}</td></tr>") or ""}
                     <tr>
                         <td style="color: #718096; padding: 8px 0; font-size: 19px;">创建时间</td>
                         <td style="color: #718096; font-size: 19px;">{account.created_at[:16].replace('T', ' ')}</td>
