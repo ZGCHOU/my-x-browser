@@ -278,9 +278,11 @@ class BrowserManager:
             raise Exception(result.get('error', '未知错误'))
 
     def _find_window_id(self, account_name: str) -> Optional[str]:
-        """通过标题查找窗口 ID"""
+        """通过标题查找窗口 ID - 跨平台支持"""
+        import platform
         import subprocess
-        import time
+        
+        system = platform.system()
         
         # 获取已被使用的窗口 ID，避免重复
         used_window_ids = set()
@@ -289,45 +291,88 @@ class BrowserManager:
                 used_window_ids.add(ctx.window_id)
         
         try:
-            # 方法1: 搜索标题以 [账号名] 开头的窗口（最精确）
-            result = subprocess.run(
-                ["xdotool", "search", "--name", f"[{account_name}]"],
-                capture_output=True, text=True, timeout=5
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                for window_id in result.stdout.strip().split("\n"):
-                    window_id = window_id.strip()
-                    if window_id and window_id not in used_window_ids:
-                        # 验证标题确实匹配这个账号
-                        title_result = subprocess.run(
-                            ["xdotool", "getwindowname", window_id],
-                            capture_output=True, text=True, timeout=2
-                        )
-                        title = title_result.stdout.strip()
-                        # 确保标题是 [账号名] 开头
-                        if title.startswith(f"[{account_name}]"):
-                            return window_id
-            
-            # 方法2: 搜索所有 Camoufox/Firefox 窗口，过滤标题
-            for class_name in ["camoufox-default", "Navigator", "firefox", "Firefox"]:
+            if system == "Windows":
+                # Windows: 使用 pygetwindow
+                try:
+                    import pygetwindow as gw
+                    for window in gw.getAllWindows():
+                        if window.title.startswith(f"[{account_name}]"):
+                            window_id = str(window._hWnd)
+                            if window_id not in used_window_ids:
+                                return window_id
+                except ImportError:
+                    pass
+                    
+            elif system == "Linux":
+                # Linux: 使用 xdotool
+                # 方法1: 搜索标题以 [账号名] 开头的窗口
                 result = subprocess.run(
-                    ["xdotool", "search", "--class", class_name],
+                    ["xdotool", "search", "--name", f"[{account_name}]"],
                     capture_output=True, text=True, timeout=5
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     for window_id in result.stdout.strip().split("\n"):
                         window_id = window_id.strip()
-                        if not window_id or window_id in used_window_ids:
-                            continue
-                        
-                        title_result = subprocess.run(
-                            ["xdotool", "getwindowname", window_id],
-                            capture_output=True, text=True, timeout=2
-                        )
-                        title = title_result.stdout.strip()
-                        # 精确匹配：[账号名] 开头
-                        if title.startswith(f"[{account_name}]"):
-                            return window_id
+                        if window_id and window_id not in used_window_ids:
+                            title_result = subprocess.run(
+                                ["xdotool", "getwindowname", window_id],
+                                capture_output=True, text=True, timeout=2
+                            )
+                            title = title_result.stdout.strip()
+                            if title.startswith(f"[{account_name}]"):
+                                return window_id
+                
+                # 方法2: 搜索所有浏览器窗口
+                for class_name in ["camoufox-default", "Navigator", "firefox", "Firefox"]:
+                    result = subprocess.run(
+                        ["xdotool", "search", "--class", class_name],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    if result.returncode == 0 and result.stdout.strip():
+                        for window_id in result.stdout.strip().split("\n"):
+                            window_id = window_id.strip()
+                            if not window_id or window_id in used_window_ids:
+                                continue
+                            title_result = subprocess.run(
+                                ["xdotool", "getwindowname", window_id],
+                                capture_output=True, text=True, timeout=2
+                            )
+                            title = title_result.stdout.strip()
+                            if title.startswith(f"[{account_name}]"):
+                                return window_id
+                                
+            elif system == "Darwin":  # macOS
+                # macOS: 使用 AppleScript 获取窗口列表
+                script = '''
+                tell application "System Events"
+                    set firefoxProcesses to (every process whose name contains "firefox" or name contains "Firefox")
+                    set resultList to {}
+                    repeat with proc in firefoxProcesses
+                        repeat with i from 1 to (count of windows of proc)
+                            try
+                                set winName to name of window i of proc
+                                set end of resultList to (winName & "|" & (unix id of proc) & "_" & i)
+                            end try
+                        end repeat
+                    end repeat
+                    return resultList as string
+                end tell
+                '''
+                result = subprocess.run(
+                    ["osascript", "-e", script],
+                    capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    # 解析结果
+                    entries = result.stdout.strip().split(", ")
+                    for entry in entries:
+                        if "|" in entry:
+                            parts = entry.split("|")
+                            if len(parts) >= 2:
+                                title = parts[0].strip()
+                                window_id = parts[1].strip()
+                                if title.startswith(f"[{account_name}]") and window_id not in used_window_ids:
+                                    return window_id
         except Exception as e:
             print(f"查找窗口 ID 出错: {e}")
         

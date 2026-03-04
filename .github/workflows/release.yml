@@ -1,0 +1,146 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r requirements.txt
+        pip install pygetwindow
+    
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm --add-data "manager;manager" --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets --hidden-import=camoufox --hidden-import=camoufox.sync_api --hidden-import=pygetwindow run_manager.py
+    
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/CamoufoxManager.exe
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libegl1 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r requirements.txt
+    
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm --add-data="manager:manager" --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets --hidden-import=camoufox --hidden-import=camoufox.sync_api run_manager.py
+    
+    - name: Create portable package
+      run: |
+        mkdir -p CamoufoxManager_Linux
+        cp dist/CamoufoxManager CamoufoxManager_Linux/
+        chmod +x CamoufoxManager_Linux/CamoufoxManager
+        
+        cat > CamoufoxManager_Linux/启动.sh << 'EOF'
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+./CamoufoxManager
+EOF
+        chmod +x CamoufoxManager_Linux/启动.sh
+        
+        tar -czf CamoufoxManager_Linux.tar.gz CamoufoxManager_Linux/
+    
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/CamoufoxManager
+          CamoufoxManager_Linux.tar.gz
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r requirements.txt
+    
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm --add-data="manager:manager" --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets --hidden-import=camoufox --hidden-import=camoufox.sync_api run_manager.py
+    
+    - name: Create macOS app bundle
+      run: |
+        mkdir -p "CamoufoxManager.app/Contents/MacOS"
+        mkdir -p "CamoufoxManager.app/Contents/Resources"
+        cp dist/CamoufoxManager "CamoufoxManager.app/Contents/MacOS/"
+        chmod +x "CamoufoxManager.app/Contents/MacOS/CamoufoxManager"
+        
+        cat > "CamoufoxManager.app/Contents/Info.plist" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>CamoufoxManager</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.camoufox.manager</string>
+    <key>CFBundleName</key>
+    <string>Camoufox Manager</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+</dict>
+</plist>
+EOF
+        
+        tar -czf CamoufoxManager_macOS.tar.gz CamoufoxManager.app
+    
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v1
+      with:
+        files: CamoufoxManager_macOS.tar.gz
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
