@@ -27,13 +27,14 @@ jobs:
         pip install pygetwindow
     
     - name: Build with PyInstaller
+      shell: bash
       run: |
-        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm ^
-          --add-data "manager;manager" ^
-          --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets ^
-          --hidden-import=camoufox --hidden-import=camoufox.sync_api --hidden-import=pygetwindow ^
-          --hidden-import=browserforge --hidden-import=browserforge.headers --hidden-import=browserforge.fingerprints ^
-          --collect-data=browserforge ^
+        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm \
+          --add-data "manager;manager" \
+          --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets \
+          --hidden-import=camoufox --hidden-import=camoufox.sync_api --hidden-import=pygetwindow \
+          --hidden-import=browserforge --hidden-import=browserforge.headers --hidden-import=browserforge.fingerprints \
+          --collect-data=browserforge \
           run_manager.py
     
     - name: Upload Release Asset
