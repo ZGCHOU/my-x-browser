@@ -7,7 +7,7 @@ import sys
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QListWidget, QListWidgetItem,
-    QMessageBox, QFrame, QApplication
+    QMessageBox, QFrame, QApplication, QLineEdit
 )
 from PyQt5.QtCore import Qt, QSize, QTimer
 
@@ -47,6 +47,9 @@ class MainWindow(QMainWindow):
         self.starting_accounts = set()
         self.stopping_accounts = set()
         
+        # 搜索关键词
+        self.search_text = ""
+        
         self.init_ui()
         self.load_accounts()
         
@@ -75,16 +78,17 @@ class MainWindow(QMainWindow):
         header.addStretch()
         
         # 添加按钮
-        add_btn = QPushButton("+")
-        add_btn.setFixedSize(44, 44)
+        add_btn = QPushButton("＋")
+        add_btn.setFixedSize(40, 40)
         add_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {PRIMARY_COLOR};
                 color: white;
                 border: none;
-                border-radius: 22px;
-                font-size: 24px;
+                border-radius: 20px;
+                font-size: 20px;
                 font-weight: bold;
+                padding: 0px;
             }}
             QPushButton:hover {{ background-color: {SUCCESS_COLOR}; }}
         """)
@@ -93,6 +97,27 @@ class MainWindow(QMainWindow):
         header.addWidget(add_btn)
         
         layout.addLayout(header)
+        
+        # 搜索框
+        search_layout = QHBoxLayout()
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("搜索账号...")
+        self.search_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {LIGHT_CARD};
+                border: 2px solid {LIGHT_BORDER};
+                border-radius: 10px;
+                padding: 10px 14px;
+                font-size: 16px;
+                color: {LIGHT_TEXT};
+            }}
+            QLineEdit:focus {{
+                border: 2px solid {PRIMARY_COLOR};
+            }}
+        """)
+        self.search_input.textChanged.connect(self.on_search_changed)
+        search_layout.addWidget(self.search_input)
+        layout.addLayout(search_layout)
         
         # 副标题
         subtitle = QLabel("多账号管理")
@@ -340,10 +365,19 @@ class MainWindow(QMainWindow):
         """点击启动/停止按钮"""
         self.toggle_account(acc_id)
     
+    def on_search_changed(self, text):
+        """搜索框内容改变"""
+        self.search_text = text.strip().lower()
+        self.load_accounts()
+    
     def load_accounts(self):
         """加载账号列表"""
         self.account_list.clear()
         accounts = self.db.get_all_accounts()
+        
+        # 根据搜索关键词过滤
+        if self.search_text:
+            accounts = [acc for acc in accounts if self.search_text in acc.name.lower()]
         
         for acc in accounts:
             item = QListWidgetItem()
@@ -353,8 +387,12 @@ class MainWindow(QMainWindow):
             widget = self.create_account_item_widget(acc)
             self.account_list.setItemWidget(item, widget)
         
-        running = sum(1 for a in accounts if self.browser_manager.is_running(a.id))
-        self.stats_label.setText(f"{len(accounts)}个账号 | {running}运行中")
+        running = sum(1 for a in self.db.get_all_accounts() if self.browser_manager.is_running(a.id))
+        total = len(self.db.get_all_accounts())
+        if self.search_text:
+            self.stats_label.setText(f"显示{len(accounts)}/{total}个 | {running}运行中")
+        else:
+            self.stats_label.setText(f"{total}个账号 | {running}运行中")
     
     def refresh_status(self):
         """刷新状态"""
@@ -435,11 +473,18 @@ class MainWindow(QMainWindow):
     def _do_start_browser(self, acc_id, acc):
         """实际启动浏览器的操作"""
         try:
+            # 使用账号设置的窗口大小
+            window_size = {
+                'width': acc.window_width if acc.window_width else 1280,
+                'height': acc.window_height if acc.window_height else 800
+            }
+            print(f"🖥️  窗口大小: {window_size['width']}x{window_size['height']}")
+            
             self.browser_manager.start_browser(
                 acc_id, acc.name, acc.profile_dir,
                 proxy=acc.proxy,
                 url=acc.url or 'https://www.google.com',
-                window_size={'width': 1280, 'height': 800}
+                window_size=window_size
             )
         except Exception as e:
             QMessageBox.critical(self, "启动失败", str(e))

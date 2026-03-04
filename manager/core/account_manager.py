@@ -8,13 +8,16 @@ from datetime import datetime
 class Account:
     """账号数据模型"""
     def __init__(self, name: str, profile_dir: str, proxy: Optional[str] = None,
-                 notes: str = "", url: str = "https://www.google.com", account_id: Optional[str] = None):
+                 notes: str = "", url: str = "https://www.google.com", account_id: Optional[str] = None,
+                 window_width: int = 1280, window_height: int = 800):
         self.id = account_id or self._generate_id()
         self.name = name
         self.profile_dir = profile_dir
         self.proxy = proxy  # 格式: http://127.0.0.1:7897
         self.notes = notes
         self.url = url  # 启动时访问的URL
+        self.window_width = window_width  # 窗口宽度
+        self.window_height = window_height  # 窗口高度
         self.created_at = datetime.now().isoformat()
         self.last_used = None
 
@@ -32,6 +35,8 @@ class Account:
             'proxy': self.proxy,
             'notes': self.notes,
             'url': self.url,
+            'window_width': self.window_width,
+            'window_height': self.window_height,
             'created_at': self.created_at,
             'last_used': self.last_used
         }
@@ -45,7 +50,9 @@ class Account:
             proxy=data.get('proxy'),
             notes=data.get('notes', ''),
             url=data.get('url', 'https://www.google.com'),
-            account_id=data.get('id')
+            account_id=data.get('id'),
+            window_width=data.get('window_width', 1280),
+            window_height=data.get('window_height', 800)
         )
         account.created_at = data.get('created_at', account.created_at)
         account.last_used = data.get('last_used')
@@ -86,7 +93,9 @@ class AccountManager:
         except Exception as e:
             print(f"保存账号数据失败: {e}")
 
-    def add_account(self, name: str, proxy: Optional[str] = None, notes: str = "", url: str = "https://www.google.com") -> Account:
+    def add_account(self, name: str, proxy: Optional[str] = None, notes: str = "", 
+                     url: str = "https://www.google.com", window_width: int = 1280, 
+                     window_height: int = 800) -> Account:
         """添加新账号"""
         # 自动生成 profile 目录和状态文件路径
         profile_dir = os.path.abspath(f"./profiles/{name}")
@@ -94,7 +103,8 @@ class AccountManager:
         # storage_state 需要是 JSON 文件路径，不是目录
         state_file = os.path.join(profile_dir, "state.json")
 
-        account = Account(name=name, profile_dir=state_file, proxy=proxy, notes=notes, url=url)
+        account = Account(name=name, profile_dir=state_file, proxy=proxy, notes=notes, 
+                         url=url, window_width=window_width, window_height=window_height)
         self.accounts.append(account)
         self.save()
         return account
@@ -120,6 +130,10 @@ class AccountManager:
                     acc.notes = kwargs['notes']
                 if 'url' in kwargs:
                     acc.url = kwargs['url']
+                if 'window_width' in kwargs:
+                    acc.window_width = kwargs['window_width']
+                if 'window_height' in kwargs:
+                    acc.window_height = kwargs['window_height']
                 self.save()
                 return True
         return False

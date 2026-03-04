@@ -103,7 +103,19 @@ class AccountDialog(QDialog):
         self.url_input.setPlaceholderText("https://www.google.com")
         form.addRow("启动网址", self.url_input)
         
-
+        # 窗口大小
+        size_layout = QHBoxLayout()
+        self.width_input = QLineEdit()
+        self.width_input.setPlaceholderText("1280")
+        self.width_input.setMaximumWidth(100)
+        size_layout.addWidget(self.width_input)
+        size_layout.addWidget(QLabel("x"))
+        self.height_input = QLineEdit()
+        self.height_input.setPlaceholderText("800")
+        self.height_input.setMaximumWidth(100)
+        size_layout.addWidget(self.height_input)
+        size_layout.addStretch()
+        form.addRow("窗口大小 (宽x高)", size_layout)
         
         # 备注
         self.notes_input = QTextEdit()
@@ -159,6 +171,10 @@ class AccountDialog(QDialog):
         if self.account.url:
             self.url_input.setText(self.account.url)
         
+        # 加载窗口大小
+        self.width_input.setText(str(self.account.window_width))
+        self.height_input.setText(str(self.account.window_height))
+        
         if self.account.notes:
             self.notes_input.setText(self.account.notes)
     
@@ -173,6 +189,14 @@ class AccountDialog(QDialog):
         url = self.url_input.text().strip() or "https://www.google.com"
         notes = self.notes_input.toPlainText().strip()
         
+        # 获取窗口大小
+        try:
+            window_width = int(self.width_input.text()) if self.width_input.text() else 1280
+            window_height = int(self.height_input.text()) if self.height_input.text() else 800
+        except ValueError:
+            window_width = 1280
+            window_height = 800
+        
         try:
             if self.account_id:
                 # 编辑模式
@@ -180,7 +204,9 @@ class AccountDialog(QDialog):
                     self.account_id,
                     proxy=proxy,
                     url=url,
-                    notes=notes
+                    notes=notes,
+                    window_width=window_width,
+                    window_height=window_height
                 )
             else:
                 # 添加模式
@@ -194,7 +220,9 @@ class AccountDialog(QDialog):
                     name=name,
                     proxy=proxy,
                     notes=notes,
-                    url=url
+                    url=url,
+                    window_width=window_width,
+                    window_height=window_height
                 )
             
             self.accept()
