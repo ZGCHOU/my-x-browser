@@ -9,7 +9,7 @@ if os.path.exists(ADDON_DIR):
         if os.path.isdir(path) and not os.path.exists(os.path.join(path, "manifest.json")):
             shutil.rmtree(path)
 
-# 2. 定义账号存放点 (实现多开隔离)
+# 2. 定义账号存放点 (多开隔离)
 # 换新账号只需修改这里的文件夹名，如 acc_2, acc_3
 profile_dir = os.path.abspath("./profiles/acc_1")
 os.makedirs(profile_dir, exist_ok=True)
