@@ -234,28 +234,28 @@ class MainWindow(QMainWindow):
         status = QLabel(status_text)
         status.setStyleSheet(f"""
             color: {status_color};
-            font-size: 20px;
+            font-size: 18px;
         """)
         layout.addWidget(status)
         
         # 账号名
         name = QLabel(acc.name)
         name.setStyleSheet(f"""
-            font-size: 20px;
+            font-size: 19px;
             font-weight: 600;
             color: {LIGHT_TEXT};
         """)
-        name.setMaximumWidth(140)
+        name.setMaximumWidth(100)
         name.setWordWrap(False)
         layout.addWidget(name, 1)
         
         # 操作按钮组
         btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(8)
+        btn_layout.setSpacing(10)
         
         # 启动/停止按钮
         action_btn = QPushButton()
-        action_btn.setFixedSize(48, 42)
+        action_btn.setFixedSize(52, 46)
         if is_starting or is_stopping:
             action_btn.setText("...")
             bg_color = WARNING_COLOR if is_starting else DANGER_COLOR
@@ -264,8 +264,8 @@ class MainWindow(QMainWindow):
                     background-color: {bg_color};
                     color: white;
                     border: none;
-                    border-radius: 10px;
-                    font-size: 14px;
+                    border-radius: 12px;
+                    font-size: 16px;
                     font-weight: bold;
                     padding: 0;
                 }}
@@ -278,8 +278,8 @@ class MainWindow(QMainWindow):
                     background-color: {DANGER_COLOR};
                     color: white;
                     border: none;
-                    border-radius: 10px;
-                    font-size: 15px;
+                    border-radius: 12px;
+                    font-size: 17px;
                     font-weight: bold;
                     padding: 0;
                 }}
@@ -292,8 +292,8 @@ class MainWindow(QMainWindow):
                     background-color: {SUCCESS_COLOR};
                     color: white;
                     border: none;
-                    border-radius: 10px;
-                    font-size: 15px;
+                    border-radius: 12px;
+                    font-size: 17px;
                     font-weight: bold;
                     padding: 0;
                 }}
@@ -306,14 +306,14 @@ class MainWindow(QMainWindow):
         
         # 编辑按钮
         edit_btn = QPushButton("编")
-        edit_btn.setFixedSize(42, 42)
+        edit_btn.setFixedSize(48, 46)
         edit_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {LIGHT_BG};
                 color: {LIGHT_TEXT_SECONDARY};
                 border: 2px solid {LIGHT_BORDER};
-                border-radius: 10px;
-                font-size: 15px;
+                border-radius: 12px;
+                font-size: 16px;
                 font-weight: 600;
                 padding: 0;
             }}
@@ -328,14 +328,14 @@ class MainWindow(QMainWindow):
         
         # 删除按钮
         del_btn = QPushButton("删")
-        del_btn.setFixedSize(42, 42)
+        del_btn.setFixedSize(48, 46)
         del_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
                 color: {DANGER_COLOR};
                 border: 2px solid {DANGER_COLOR};
-                border-radius: 10px;
-                font-size: 15px;
+                border-radius: 12px;
+                font-size: 16px;
                 font-weight: 600;
                 padding: 0;
             }}
