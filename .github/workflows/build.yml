@@ -28,7 +28,13 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm --add-data "manager;manager" --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets --hidden-import=camoufox --hidden-import=camoufox.sync_api --hidden-import=pygetwindow run_manager.py
+        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm ^
+          --add-data "manager;manager" ^
+          --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets ^
+          --hidden-import=camoufox --hidden-import=camoufox.sync_api --hidden-import=pygetwindow ^
+          --hidden-import=browserforge --hidden-import=browserforge.headers --hidden-import=browserforge.fingerprints ^
+          --collect-data=browserforge ^
+          run_manager.py
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -59,7 +65,13 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm --add-data="manager:manager" --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets --hidden-import=camoufox --hidden-import=camoufox.sync_api run_manager.py
+        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm \
+          --add-data="manager:manager" \
+          --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets \
+          --hidden-import=camoufox --hidden-import=camoufox.sync_api \
+          --hidden-import=browserforge --hidden-import=browserforge.headers --hidden-import=browserforge.fingerprints \
+          --collect-data=browserforge \
+          run_manager.py
     
     - name: Create portable package
       run: |
@@ -76,9 +88,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: CamoufoxManager-Linux
-        path: |
-          dist/CamoufoxManager
-          CamoufoxManager_Linux.tar.gz
+        path: CamoufoxManager_Linux.tar.gz
 
   build-macos:
     runs-on: macos-latest
@@ -98,7 +108,13 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm --add-data="manager:manager" --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets --hidden-import=camoufox --hidden-import=camoufox.sync_api run_manager.py
+        pyinstaller --name=CamoufoxManager --onefile --windowed --clean --noconfirm \
+          --add-data="manager:manager" \
+          --hidden-import=PyQt5.sip --hidden-import=PyQt5.QtCore --hidden-import=PyQt5.QtGui --hidden-import=PyQt5.QtWidgets \
+          --hidden-import=camoufox --hidden-import=camoufox.sync_api \
+          --hidden-import=browserforge --hidden-import=browserforge.headers --hidden-import=browserforge.fingerprints \
+          --collect-data=browserforge \
+          run_manager.py
     
     - name: Create macOS app bundle
       run: |
