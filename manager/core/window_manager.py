@@ -532,7 +532,20 @@ class WindowManager:
     def get_window_by_account(self, account_name: str) -> Optional[WindowInfo]:
         """根据账号名查找窗口"""
         windows = self.list_windows()
+        
+        # 方法1: 精确匹配 account_name 字段
         for window in windows:
             if window.account_name == account_name:
                 return window
+        
+        # 方法2: 标题包含 [账号名]
+        for window in windows:
+            if f"[{account_name}]" in window.title:
+                return window
+        
+        # 方法3: 标题包含账号名（宽松匹配）
+        for window in windows:
+            if account_name.lower() in window.title.lower():
+                return window
+        
         return None

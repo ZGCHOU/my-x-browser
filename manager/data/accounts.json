@@ -7,7 +7,7 @@
     "notes": "",
     "url": "https://www.google.com",
     "created_at": "2026-03-02T16:45:05.245029",
-    "last_used": "2026-03-04T16:18:14.873297"
+    "last_used": "2026-03-04T21:50:43.745217"
   },
   {
     "id": "348850a8",
@@ -17,7 +17,7 @@
     "notes": "",
     "url": "https://www.google.com",
     "created_at": "2026-03-02T16:54:40.526409",
-    "last_used": null
+    "last_used": "2026-03-04T21:50:46.714905"
   },
   {
     "id": "87f8389e",
@@ -27,7 +27,7 @@
     "notes": "",
     "url": "https://www.google.com",
     "created_at": "2026-03-02T16:55:02.495101",
-    "last_used": "2026-03-04T16:18:32.310332"
+    "last_used": "2026-03-04T21:50:50.838534"
   },
   {
     "id": "31dc7510",
@@ -37,6 +37,16 @@
     "notes": "",
     "url": "https://www.google.com",
     "created_at": "2026-03-02T16:56:56.125795",
-    "last_used": "2026-03-04T16:18:26.717337"
+    "last_used": "2026-03-04T22:17:17.561134"
+  },
+  {
+    "id": "cad608f8",
+    "name": "google5",
+    "profile_dir": "/home/chenyi/code/camoufox/profiles/google5/state.json",
+    "proxy": null,
+    "notes": "",
+    "url": "https://www.google.com",
+    "created_at": "2026-03-04T22:05:12.821241",
+    "last_used": "2026-03-04T22:17:08.289546"
   }
 ]

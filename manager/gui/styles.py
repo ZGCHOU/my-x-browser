@@ -201,6 +201,37 @@ def get_main_stylesheet():
         color: #86efac;
         border: 2px solid #bbf7d0;
     }}
+    
+    /* 批量操作按钮 */
+    QPushButton#batch_start_btn {{
+        background: #dcfce7;
+        border: 2px solid {SUCCESS_COLOR};
+        border-radius: 8px;
+        color: #166534;
+        font-size: {FONT_SMALL};
+        font-weight: 600;
+        padding: 8px 12px;
+    }}
+    
+    QPushButton#batch_start_btn:hover {{
+        background: {SUCCESS_COLOR};
+        color: white;
+    }}
+    
+    QPushButton#batch_stop_btn {{
+        background: #fee2e2;
+        border: 2px solid {DANGER_COLOR};
+        border-radius: 8px;
+        color: #991b1b;
+        font-size: {FONT_SMALL};
+        font-weight: 600;
+        padding: 8px 12px;
+    }}
+    
+    QPushButton#batch_stop_btn:hover {{
+        background: {DANGER_COLOR};
+        color: white;
+    }}
 
     /* 列表样式 - 大条目 */
     QListWidget {{
