@@ -67,12 +67,12 @@ jobs:
         cp dist/CamoufoxManager CamoufoxManager_Linux/
         chmod +x CamoufoxManager_Linux/CamoufoxManager
         
-        cat > CamoufoxManager_Linux/启动.sh << 'EOF'
+        cat > CamoufoxManager_Linux/启动.sh << 'EOFSCRIPT'
 #!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 ./CamoufoxManager
-EOF
+EOFSCRIPT
         chmod +x CamoufoxManager_Linux/启动.sh
         
         tar -czf CamoufoxManager_Linux.tar.gz CamoufoxManager_Linux/
