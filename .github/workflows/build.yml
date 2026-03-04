@@ -107,24 +107,22 @@ jobs:
         cp dist/CamoufoxManager "CamoufoxManager.app/Contents/MacOS/"
         chmod +x "CamoufoxManager.app/Contents/MacOS/CamoufoxManager"
         
-        cat > "CamoufoxManager.app/Contents/Info.plist" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>CamoufoxManager</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.camoufox.manager</string>
-    <key>CFBundleName</key>
-    <string>Camoufox Manager</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-</dict>
-</plist>
-EOF
+        echo '<?xml version="1.0" encoding="UTF-8"?>' > "CamoufoxManager.app/Contents/Info.plist"
+        echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '<plist version="1.0">' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '<dict>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <key>CFBundleExecutable</key>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <string>CamoufoxManager</string>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <key>CFBundleIdentifier</key>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <string>com.camoufox.manager</string>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <key>CFBundleName</key>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <string>Camoufox Manager</string>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <key>CFBundlePackageType</key>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <string>APPL</string>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <key>CFBundleShortVersionString</key>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '    <string>1.0.0</string>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '</dict>' >> "CamoufoxManager.app/Contents/Info.plist"
+        echo '</plist>' >> "CamoufoxManager.app/Contents/Info.plist"
         
         tar -czf CamoufoxManager_macOS.tar.gz CamoufoxManager.app
     
