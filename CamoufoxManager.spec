@@ -5,23 +5,29 @@ from PyInstaller.building.build_main import Analysis, PYZ, EXE
 
 # 检测平台
 is_windows = sys.platform.startswith('win')
-is_macos = sys.platform == 'darwin'
 
 # 基础配置
 block_cipher = None
 
-# 数据文件 - 使用 collect_all 来自动收集包数据
-from PyInstaller.utils.hooks import collect_all, collect_data_files
+# 收集数据文件
+from PyInstaller.utils.hooks import collect_all
 
-# 收集 browserforge 的所有数据
-browserforge_datas = collect_all('browserforge')
-
-# 基础数据文件
+# 收集 browserforge 和 apify_fingerprint_datapoints 的所有数据
 datas = [('manager', 'manager')]
 
-# 添加 browserforge 的数据
-if browserforge_datas:
-    datas.extend(browserforge_datas[0])
+# 收集 browserforge
+try:
+    bf_datas, bf_binaries, bf_hidden = collect_all('browserforge')
+    datas.extend(bf_datas)
+except:
+    pass
+
+# 收集 apify_fingerprint_datapoints（browserforge 的依赖）
+try:
+    apify_datas, apify_binaries, apify_hidden = collect_all('apify_fingerprint_datapoints')
+    datas.extend(apify_datas)
+except:
+    pass
 
 # 隐藏导入
 hiddenimports = [
@@ -34,6 +40,7 @@ hiddenimports = [
     'browserforge',
     'browserforge.headers',
     'browserforge.fingerprints',
+    'apify_fingerprint_datapoints',
 ]
 
 if is_windows:
