@@ -1,0 +1,130 @@
+{
+  "name": "geekez-browser",
+  "version": "1.4.0",
+  "description": "Stealthy Anti-Detect Browser for E-Commerce",
+  "main": "main.js",
+  "author": "EchoHS",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "postinstall": "node setup.js",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.geekez.browser",
+    "productName": "GeekEZ Browser",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!**/*.ts",
+      "!*.map",
+      "!package-lock.json",
+      "!dist",
+      "!_Trash_Bin",
+      "!release"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "resources/puppeteer",
+        "to": "puppeteer",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "icon.ico",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.icns"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 270,
+          "y": 100,
+          "type": "file",
+          "path": "resources/使用说明.txt"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "icon.png"
+    }
+  },
+  "dependencies": {
+    "@puppeteer/browsers": "^2.10.13",
+    "adm-zip": "^0.5.16",
+    "fs-extra": "^11.3.2",
+    "get-port": "^5.1.1",
+    "js-base64": "^3.7.8",
+    "js-yaml": "^4.1.1",
+    "puppeteer": "^24.34.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "socks-proxy-agent": "^8.0.5",
+    "sql.js": "^1.14.1",
+    "tcp-ping": "^0.1.1",
+    "tree-kill": "^1.2.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "puppeteer": {
+    "skipDownload": true,
+    "skipFirefoxDownload": true
+  }
+}
