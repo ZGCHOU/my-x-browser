@@ -1835,6 +1835,26 @@ ipcMain.handle('export-data', async (e, type) => {
     return false;
 });
 
+ipcMain.handle('stop-profile', async (event, profileId) => {
+    if (activeProcesses[profileId]) {
+        const proc = activeProcesses[profileId];
+        try {
+            await forceKill(proc.xrayPid);
+            if (proc.browser && proc.browser.isConnected()) {
+                await proc.browser.close();
+            }
+        } catch (e) {
+            console.error('Stop error:', e);
+        }
+        if (proc.logFd !== undefined) {
+            try { require('fs-extra').closeSync(proc.logFd); } catch (e) { }
+        }
+        delete activeProcesses[profileId];
+        return { success: true };
+    }
+    return { success: false, error: 'Not running' };
+});
+
 // --- 核心启动逻辑 ---
 ipcMain.handle('launch-profile', async (event, profileId, watermarkStyle) => {
     const sender = event.sender;

@@ -268,9 +268,13 @@ function createProfileRow(p) {
 // ============================================================================
 async function toggleProfile(id) {
     if (runningProfiles.has(id)) {
-        // Stop profile - for now just reload to check status
-        await updateRunningStatus();
-        loadProfiles();
+        try {
+            await window.electronAPI.invoke('stop-profile', id);
+            await updateRunningStatus();
+            loadProfiles();
+        } catch (e) {
+            showAlert('停止失败：' + e.message);
+        }
     } else {
         await launch(id);
     }
