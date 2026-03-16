@@ -46,6 +46,9 @@ async function init() {
     window.electronAPI.onRefreshProfiles(() => loadProfiles());
     window.electronAPI.onApiLaunchProfile((id) => launch(id));
 
+    // Initialize Theme
+    applyTheme();
+
     // Initialize dropdowns
     initCustomTimezoneDropdown('addTimezone', 'addTimezoneDropdown');
     initCustomTimezoneDropdown('editTimezone', 'editTimezoneDropdown');
@@ -1253,6 +1256,31 @@ async function checkUpdatesSilent() {
 
 function showDashboard() {
     // Already on dashboard
+}
+
+// Theme Toggle logic
+function applyTheme() {
+    const theme = localStorage.getItem('icanx_theme') || 'dark';
+    const isLight = theme === 'light';
+    document.body.classList.toggle('light-mode', isLight);
+
+    // Update icons
+    const sunIcon = document.querySelector('.theme-icon-light');
+    const moonIcon = document.querySelector('.theme-icon-dark');
+    if (sunIcon && moonIcon) {
+        sunIcon.style.display = isLight ? 'none' : 'block'; // Show sun only in dark mode
+        moonIcon.style.display = isLight ? 'block' : 'none'; // Show moon only in light mode
+    }
+
+    // Update native title bar overlay
+    window.electronAPI.invoke('update-titlebar-theme', theme);
+}
+
+function toggleTheme() {
+    const currentTheme = localStorage.getItem('icanx_theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('icanx_theme', newTheme);
+    applyTheme();
 }
 
 // ============================================================================

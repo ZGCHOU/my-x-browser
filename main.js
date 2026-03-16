@@ -484,6 +484,23 @@ ipcMain.handle('get-api-status', () => {
     return { running: apiServerRunning };
 });
 
+ipcMain.handle('update-titlebar-theme', (event, theme) => {
+    if (!mainWindow) return;
+    if (theme === 'light') {
+        mainWindow.setTitleBarOverlay({
+            color: '#ffffff', // bg-secondary in light mode
+            symbolColor: '#0f172a', // text-primary in light mode
+            height: 35
+        });
+    } else {
+        mainWindow.setTitleBarOverlay({
+            color: '#12121a', // bg-secondary in dark mode
+            symbolColor: '#f8fafc', // text-primary in dark mode
+            height: 35
+        });
+    }
+});
+
 
 function forceKill(pid) {
     return new Promise((resolve) => {
@@ -549,9 +566,9 @@ function createWindow() {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
     const win = new BrowserWindow({
         width: Math.round(width * 0.5), height: Math.round(height * 0.601), minWidth: 900, minHeight: 600,
-        title: "icanx Browser", backgroundColor: '#1e1e2d',
+        title: "icanx Browser", backgroundColor: '#0a0a0f',
         icon: path.join(__dirname, 'icon.png'),
-        titleBarOverlay: { color: '#1e1e2d', symbolColor: '#ffffff', height: 35 },
+        titleBarOverlay: { color: '#12121a', symbolColor: '#f8fafc', height: 35 },
         titleBarStyle: 'hidden',
         webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, spellcheck: false }
     });
