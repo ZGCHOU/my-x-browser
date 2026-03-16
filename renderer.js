@@ -370,7 +370,7 @@ async function saveNewProfile() {
         let name;
 
         if (!nameBase) {
-            name = getProxyRemark(proxyStr) || `Profile-${String(i + 1).padStart(2, '0')}`;
+            name = getProxyRemark(proxyStr) || `环境-${String(i + 1).padStart(2, '0')}`;
         } else if (proxyLines.length <= 1) {
             name = nameBase;
         } else {
@@ -674,8 +674,8 @@ async function confirmExport() {
             profileIds: profiles.map(p => p.id)
         });
 
-        if (result.success) showAlert(`Export successful! ${result.count} profiles exported`);
-        else if (!result.cancelled) showAlert(result.error || 'Export failed');
+        if (result.success) showAlert(`导出成功！已导出 ${result.count} 个环境`);
+        else if (!result.cancelled) showAlert(result.error || '导出失败');
     } catch (e) {
         showAlert('导出失败：' + e.message);
     }
@@ -787,7 +787,7 @@ async function selectDataDirectory() {
     const newPath = await window.electronAPI.invoke('select-data-directory');
     if (!newPath) return;
 
-    const migrate = confirm('Migrate existing data to new directory?');
+    const migrate = confirm('是否将现有数据迁移到新目录？');
     const result = await window.electronAPI.invoke('set-data-directory', { newPath, migrate });
 
     if (result.success) {
@@ -799,7 +799,7 @@ async function selectDataDirectory() {
 }
 
 async function resetDataDirectory() {
-    if (!confirm('Reset to default data directory?')) return;
+    if (!confirm('是否重置为默认数据目录？')) return;
 
     const result = await window.electronAPI.invoke('reset-data-directory');
     if (result.success) {
@@ -836,7 +836,7 @@ async function loadUserExtensions() {
                 <div class="ext-name">${ext.split(/[\\/]/).pop()}</div>
                 <div class="ext-path">${ext}</div>
             </div>
-            <button class="btn btn-danger" onclick="removeUserExtension('${ext.replace(/\\/g, '\\\\')}')">Remove</button>
+            <button class="btn btn-danger" onclick="removeUserExtension('${ext.replace(/\\/g, '\\\\')}')">移除</button>
         </div>
     `).join('');
 }
@@ -951,7 +951,7 @@ function closeSubEditModal() {
 
 async function saveSubscription() {
     const id = document.getElementById('subId').value;
-    const name = document.getElementById('subName').value || 'Subscription';
+    const name = document.getElementById('subName').value || '订阅';
     const url = document.getElementById('subUrl').value.trim();
     let interval = document.getElementById('subInterval').value;
 
@@ -996,7 +996,7 @@ async function updateSubscriptionNodes(sub) {
         lines.forEach(line => {
             line = line.trim();
             if (line && line.includes('://')) {
-                const remark = getProxyRemark(line) || `Node ${count + 1}`;
+                const remark = getProxyRemark(line) || `节点 ${count + 1}`;
                 globalSettings.preProxies.push({
                     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
                     remark, url: line, enable: true, groupId: sub.id
@@ -1090,14 +1090,14 @@ function getProxyRemark(link) {
 }
 
 function getLanguageName(code) {
-    if (!code || code === 'auto') return 'Auto (System Default)';
+    if (!code || code === 'auto') return '自动 (系统默认)';
     if (!window.LANGUAGE_DATA) return code;
     const entry = window.LANGUAGE_DATA.find(x => x.code === code);
     return entry ? entry.name : code;
 }
 
 function getLanguageCode(name) {
-    if (!name || name === 'Auto (System Default)') return 'auto';
+    if (!name || name === '自动 (系统默认)') return 'auto';
     if (!window.LANGUAGE_DATA) return 'auto';
     const entry = window.LANGUAGE_DATA.find(x => x.name === name);
     return entry ? entry.code : 'auto';
@@ -1148,13 +1148,13 @@ function initCustomCityDropdown(inputId, dropdownId) {
     const dropdown = document.getElementById(dropdownId);
     if (!input || !dropdown) return;
 
-    let allOptions = [{ name: 'Auto (IP Based)' }];
+    let allOptions = [{ name: '自动 (基于 IP)' }];
     if (window.CITY_DATA) allOptions = allOptions.concat(window.CITY_DATA);
     let selectedIndex = -1;
 
     function populateDropdown(filter = '') {
         const lowerFilter = filter.toLowerCase();
-        const shouldShowAll = filter === 'Auto (IP Based)' || filter === '';
+        const shouldShowAll = filter === '自动 (基于 IP)' || filter === '';
         const filtered = shouldShowAll ? allOptions : allOptions.filter(item => item.name.toLowerCase().includes(lowerFilter));
         dropdown.innerHTML = filtered.map((item, index) => `<div class="dropdown-item" data-name="${item.name}" data-index="${index}">${item.name}</div>`).join('');
         selectedIndex = -1;

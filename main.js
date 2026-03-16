@@ -1593,9 +1593,9 @@ ipcMain.handle('export-full-backup', async (e, { profileIds, password }) => {
         const encrypted = encryptData(compressed, password);
 
         const { filePath } = await dialog.showSaveDialog({
-            title: 'Export Full Backup',
+            title: '导出完整备份',
             defaultPath: `GeekEZ_FullBackup_${Date.now()}.geekez`,
-            filters: [{ name: 'GeekEZ Backup', extensions: ['geekez'] }]
+            filters: [{ name: 'GeekEZ 备份文件', extensions: ['geekez'] }]
         });
 
         if (filePath) {
@@ -1824,9 +1824,9 @@ ipcMain.handle('export-data', async (e, type) => {
     if (Object.keys(exportObj).length === 0) return false;
 
     const { filePath } = await dialog.showSaveDialog({
-        title: 'Export Data',
+        title: '导出数据',
         defaultPath: `GeekEZ_Backup_${type}_${Date.now()}.yaml`,
-        filters: [{ name: 'YAML', extensions: ['yml', 'yaml'] }]
+        filters: [{ name: 'YAML 文件', extensions: ['yml', 'yaml'] }]
     });
     if (filePath) {
         await fs.writeFile(filePath, yaml.dump(exportObj));
