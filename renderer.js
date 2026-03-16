@@ -73,7 +73,7 @@ async function loadProfiles() {
     try {
         const profiles = await window.electronAPI.getProfiles();
         const container = document.getElementById('profileList');
-        
+
         // Update stats
         document.getElementById('stat-total').textContent = profiles.length;
         document.getElementById('stat-active').textContent = runningProfiles.size;
@@ -116,7 +116,7 @@ async function loadProfiles() {
         }
 
         container.innerHTML = '';
-        
+
         if (viewMode === 'grid') {
             container.className = 'profiles-container profiles-grid';
             filtered.forEach(p => {
@@ -138,7 +138,7 @@ function createProfileCard(p) {
     const screen = fp.screen || { width: 0, height: 0 };
     const isRunning = runningProfiles.has(p.id);
     const firstLetter = p.name.charAt(0).toUpperCase();
-    
+
     let tagsHtml = '';
     if (p.tags && p.tags.length > 0) {
         tagsHtml = p.tags.slice(0, 2).map(tag => `<span class="tag" title="${escapeHtml(tag)}">${escapeHtml(tag.length > 6 ? tag.substring(0, 6) + '...' : tag)}</span>`).join('');
@@ -183,10 +183,10 @@ function createProfileCard(p) {
         <div class="profile-actions">
             <button class="btn-launch ${isRunning ? 'running' : ''}" onclick="event.stopPropagation(); toggleProfile('${p.id}')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    ${isRunning 
-                        ? '<rect x="6" y="6" width="12" height="12" rx="2"/>' 
-                        : '<polygon points="5 3 19 12 5 21 5 3"/>'
-                    }
+                    ${isRunning
+            ? '<rect x="6" y="6" width="12" height="12" rx="2"/>'
+            : '<polygon points="5 3 19 12 5 21 5 3"/>'
+        }
                 </svg>
                 ${isRunning ? '停止' : '启动'}
             </button>
@@ -204,7 +204,7 @@ function createProfileCard(p) {
             </button>
         </div>
     `;
-    
+
     card.onclick = () => openEditModal(p.id);
     return card;
 }
@@ -213,7 +213,7 @@ function createProfileRow(p) {
     const fp = p.fingerprint || {};
     const isRunning = runningProfiles.has(p.id);
     const firstLetter = p.name.charAt(0).toUpperCase();
-    
+
     let tagsHtml = '';
     if (p.tags && p.tags.length > 0) {
         tagsHtml = p.tags.slice(0, 2).map(tag => `<span class="row-tag">${tag}</span>`).join('');
@@ -235,10 +235,10 @@ function createProfileRow(p) {
         <div class="row-actions">
             <button class="btn-action" onclick="event.stopPropagation(); toggleProfile('${p.id}')" title="${isRunning ? '停止' : '启动'}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    ${isRunning 
-                        ? '<rect x="6" y="6" width="12" height="12" rx="2"/>' 
-                        : '<polygon points="5 3 19 12 5 21 5 3"/>'
-                    }
+                    ${isRunning
+            ? '<rect x="6" y="6" width="12" height="12" rx="2"/>'
+            : '<polygon points="5 3 19 12 5 21 5 3"/>'
+        }
                 </svg>
             </button>
             <button class="btn-action" onclick="event.stopPropagation(); openEditModal('${p.id}')" title="编辑">
@@ -255,7 +255,7 @@ function createProfileRow(p) {
             </button>
         </div>
     `;
-    
+
     row.onclick = () => openEditModal(p.id);
     return row;
 }
@@ -318,7 +318,7 @@ function openAddModal() {
     document.getElementById('addResW').value = '';
     document.getElementById('addResH').value = '';
     document.getElementById('addPreProxyOverride').value = 'default';
-    
+
     document.getElementById('addModal').classList.add('active');
 }
 
@@ -336,10 +336,10 @@ async function saveNewProfile() {
     const preProxyOverride = document.getElementById('addPreProxyOverride').value;
     const resW = parseInt(document.getElementById('addResW').value);
     const resH = parseInt(document.getElementById('addResH').value);
-    
+
     let screen = null;
     if (!isNaN(resW) && !isNaN(resH)) screen = { width: resW, height: resH };
-    
+
     let city = null, geolocation = null;
     if (cityInput && cityInput !== 'Auto (IP Based)') {
         const cityData = window.CITY_DATA ? window.CITY_DATA.find(c => c.name === cityInput) : null;
@@ -348,10 +348,10 @@ async function saveNewProfile() {
             geolocation = { latitude: cityData.lat, longitude: cityData.lng, accuracy: 100 };
         }
     }
-    
+
     const tags = tagsStr.split(/[,，]/).map(s => s.trim()).filter(s => s);
     const proxyLines = proxyText.split('\n').map(l => l.trim()).filter(l => l);
-    
+
     if (proxyLines.length === 0 && !nameBase) {
         showAlert('请输入名称或代理链接');
         return;
@@ -361,7 +361,7 @@ async function saveNewProfile() {
     for (let i = 0; i < Math.max(1, proxyLines.length); i++) {
         const proxyStr = proxyLines[i] || '';
         let name;
-        
+
         if (!nameBase) {
             name = getProxyRemark(proxyStr) || `Profile-${String(i + 1).padStart(2, '0')}`;
         } else if (proxyLines.length <= 1) {
@@ -369,7 +369,7 @@ async function saveNewProfile() {
         } else {
             name = `${nameBase}-${String(i + 1).padStart(2, '0')}`;
         }
-        
+
         try {
             await window.electronAPI.saveProfile({ name, proxyStr, tags, timezone, city, geolocation, language, screen, preProxyOverride });
             createdCount++;
@@ -377,7 +377,7 @@ async function saveNewProfile() {
             console.error(`创建环境 ${name} 失败：`, e);
         }
     }
-    
+
     closeAddModal();
     await loadProfiles();
     if (createdCount > 1) showAlert(`成功创建 ${createdCount} 个环境`);
@@ -387,10 +387,10 @@ async function openEditModal(id) {
     const profiles = await window.electronAPI.getProfiles();
     const p = profiles.find(x => x.id === id);
     if (!p) return;
-    
+
     currentEditId = id;
     const fp = p.fingerprint || {};
-    
+
     document.getElementById('editId').value = id;
     document.getElementById('editName').value = p.name;
     document.getElementById('editProxy').value = p.proxyStr;
@@ -403,12 +403,12 @@ async function openEditModal(id) {
     document.getElementById('editResH').value = fp.screen?.height || '';
     document.getElementById('editDebugPort').value = p.debugPort || '';
     document.getElementById('editCustomArgs').value = p.customArgs || '';
-    
+
     // Show/hide debug port and custom args based on settings
     const settings = await window.electronAPI.getSettings();
     document.getElementById('debugPortSection').style.display = settings.enableRemoteDebugging ? 'block' : 'none';
     document.getElementById('customArgsSection').style.display = settings.enableCustomArgs ? 'block' : 'none';
-    
+
     document.getElementById('editModal').classList.add('active');
 }
 
@@ -419,25 +419,25 @@ function closeEditModal() {
 
 async function saveEditProfile() {
     if (!currentEditId) return;
-    
+
     const profiles = await window.electronAPI.getProfiles();
     let p = profiles.find(x => x.id === currentEditId);
     if (!p) return;
-    
+
     p.name = document.getElementById('editName').value;
     p.proxyStr = document.getElementById('editProxy').value;
     p.tags = document.getElementById('editTags').value.split(/[,，]/).map(s => s.trim()).filter(s => s);
     p.preProxyOverride = document.getElementById('editPreProxyOverride').value;
-    
+
     if (!p.fingerprint) p.fingerprint = {};
     p.fingerprint.timezone = document.getElementById('editTimezone').value;
     p.fingerprint.language = getLanguageCode(document.getElementById('editLanguage').value);
-    p.fingerprint.screen = { 
-        width: parseInt(document.getElementById('editResW').value) || 1920, 
-        height: parseInt(document.getElementById('editResH').value) || 1080 
+    p.fingerprint.screen = {
+        width: parseInt(document.getElementById('editResW').value) || 1920,
+        height: parseInt(document.getElementById('editResH').value) || 1080
     };
     p.fingerprint.window = p.fingerprint.screen;
-    
+
     const cityInput = document.getElementById('editCity').value;
     if (cityInput && cityInput !== 'Auto (IP Based)') {
         const cityData = window.CITY_DATA ? window.CITY_DATA.find(c => c.name === cityInput) : null;
@@ -449,11 +449,11 @@ async function saveEditProfile() {
         delete p.fingerprint.city;
         delete p.fingerprint.geolocation;
     }
-    
+
     const debugPort = document.getElementById('editDebugPort').value.trim();
     p.debugPort = debugPort ? parseInt(debugPort) : null;
     p.customArgs = document.getElementById('editCustomArgs').value.trim();
-    
+
     await window.electronAPI.updateProfile(p);
     closeEditModal();
     loadProfiles();
@@ -499,7 +499,7 @@ function updateViewMode() {
 async function openProxyManager() {
     globalSettings = await window.electronAPI.getSettings();
     if (!globalSettings.subscriptions) globalSettings.subscriptions = [];
-    
+
     document.getElementById('proxyModal').classList.add('active');
     renderProxyList();
 }
@@ -518,19 +518,19 @@ function renderProxyList() {
         `;
     }
     modeSel.value = globalSettings.mode || 'single';
-    
+
     const list = (globalSettings.preProxies || []).filter(p => {
         if (currentProxyGroup === 'manual') return !p.groupId || p.groupId === 'manual';
         return p.groupId === currentProxyGroup;
     });
-    
+
     const container = document.getElementById('proxyList');
     container.innerHTML = '';
-    
+
     list.forEach(p => {
         const item = document.createElement('div');
         item.className = 'proxy-item';
-        
+
         let latClass = '';
         let latText = '-';
         if (p.latency !== undefined) {
@@ -541,7 +541,7 @@ function renderProxyList() {
                 latClass = p.latency < 500 ? 'good' : '';
             }
         }
-        
+
         item.innerHTML = `
             <input type="${globalSettings.mode === 'single' ? 'radio' : 'checkbox'}" 
                 name="proxySelect" ${globalSettings.selectedId === p.id ? 'checked' : ''}
@@ -581,7 +581,7 @@ async function deleteProxy(id) {
 async function testSingleProxy(id) {
     const p = globalSettings.preProxies.find(x => x.id === id);
     if (!p) return;
-    
+
     try {
         const res = await window.electronAPI.invoke('test-proxy-latency', p.url);
         p.latency = res.success ? res.latency : -1;
@@ -611,15 +611,15 @@ function updateProxyToggle() {
     const toggle = document.getElementById('proxyToggle');
     const status = document.getElementById('proxyStatusDot');
     const display = document.getElementById('currentProxyDisplay');
-    
+
     const enabled = globalSettings.enablePreProxy;
     toggle.classList.toggle('active', enabled);
     status.classList.toggle('active', enabled);
-    
+
     if (!enabled) {
         display.textContent = 'OFF';
     } else {
-        let count = globalSettings.mode === 'single' 
+        let count = globalSettings.mode === 'single'
             ? (globalSettings.selectedId ? 1 : 0)
             : (globalSettings.preProxies || []).filter(p => p.enable !== false).length;
         display.textContent = `${globalSettings.mode || 'single'} [${count}]`;
@@ -657,16 +657,16 @@ async function confirmExport() {
         showAlert('请选择导出类型');
         return;
     }
-    
+
     closeExportModal();
-    
+
     try {
         const profiles = await window.electronAPI.getProfiles();
         const result = await window.electronAPI.invoke('export-selected-data', {
             type: exportType,
             profileIds: profiles.map(p => p.id)
         });
-        
+
         if (result.success) showAlert(`Export successful! ${result.count} profiles exported`);
         else if (!result.cancelled) showAlert(result.error || 'Export failed');
     } catch (e) {
@@ -705,14 +705,14 @@ async function importFullBackup() {
 async function openSettings() {
     document.getElementById('settingsModal').classList.add('active');
     loadUserExtensions();
-    
+
     const settings = await window.electronAPI.getSettings();
-    
+
     // Load toggles
     const remoteToggle = document.getElementById('enableRemoteDebugging');
     const argsToggle = document.getElementById('enableCustomArgs');
     const apiToggle = document.getElementById('enableApiServer');
-    
+
     if (remoteToggle) remoteToggle.classList.toggle('active', settings.enableRemoteDebugging);
     if (argsToggle) argsToggle.classList.toggle('active', settings.enableCustomArgs);
     if (apiToggle) {
@@ -720,11 +720,11 @@ async function openSettings() {
         document.getElementById('apiPortSection').style.display = settings.enableApiServer ? 'block' : 'none';
         document.getElementById('apiStatus').style.display = settings.enableApiServer ? 'inline-block' : 'none';
     }
-    
+
     // Load data path
     const pathInfo = await window.electronAPI.invoke('get-data-path-info');
     document.getElementById('currentDataPath').textContent = pathInfo.currentPath;
-    
+
     // Load watermark style
     const watermarkStyle = localStorage.getItem('nexus_watermark_style') || 'enhanced';
     document.querySelectorAll('input[name="watermarkStyle"]').forEach(r => {
@@ -739,7 +739,7 @@ function closeSettings() {
 function switchSettingsTab(tab) {
     document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    
+
     document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
     document.getElementById('settings-' + tab).classList.add('active');
 }
@@ -747,7 +747,7 @@ function switchSettingsTab(tab) {
 function handleDevToggle(el) {
     el.classList.toggle('active');
     const enabled = el.classList.contains('active');
-    
+
     if (el.id === 'enableRemoteDebugging') {
         saveSetting('enableRemoteDebugging', enabled);
     } else if (el.id === 'enableCustomArgs') {
@@ -779,10 +779,10 @@ function saveWatermarkStyle(style) {
 async function selectDataDirectory() {
     const newPath = await window.electronAPI.invoke('select-data-directory');
     if (!newPath) return;
-    
+
     const migrate = confirm('Migrate existing data to new directory?');
     const result = await window.electronAPI.invoke('set-data-directory', { newPath, migrate });
-    
+
     if (result.success) {
         document.getElementById('currentDataPath').textContent = newPath;
         showAlert('数据目录已更改，请重启应用');
@@ -793,7 +793,7 @@ async function selectDataDirectory() {
 
 async function resetDataDirectory() {
     if (!confirm('Reset to default data directory?')) return;
-    
+
     const result = await window.electronAPI.invoke('reset-data-directory');
     if (result.success) {
         const info = await window.electronAPI.invoke('get-data-path-info');
@@ -817,12 +817,12 @@ async function selectExtensionFolder() {
 async function loadUserExtensions() {
     const exts = await window.electronAPI.invoke('get-user-extensions');
     const list = document.getElementById('userExtensionList');
-    
+
     if (exts.length === 0) {
         list.innerHTML = '<div style="text-align:center; color:var(--text-tertiary); padding:20px;">未添加扩展</div>';
         return;
     }
-    
+
     list.innerHTML = exts.map(ext => `
         <div class="ext-item">
             <div class="ext-info">
@@ -854,7 +854,7 @@ function closeHelp() {
 function switchHelpTab(tab) {
     document.querySelectorAll('#helpModal .settings-tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    
+
     document.querySelectorAll('#helpModal .settings-section').forEach(s => s.classList.remove('active'));
     document.getElementById('help-' + tab).classList.add('active');
 }
@@ -883,7 +883,7 @@ function renderHelpContent() {
             </ul>
         </div>
     `;
-    
+
     const aboutHTML = `
         <div style="text-align:center; margin-bottom:32px;">
             <div style="width:80px; height:80px; background:var(--accent-gradient); border-radius:20px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:36px; font-weight:700; color:white;">i</div>
@@ -919,7 +919,7 @@ function renderHelpContent() {
             </div>
         </div>
     `;
-    
+
     document.getElementById('help-manual').innerHTML = manualHTML;
     document.getElementById('help-about').innerHTML = aboutHTML;
 }
@@ -934,7 +934,7 @@ function openSubEditModal(isNew) {
     document.getElementById('subInterval').value = '24';
     document.getElementById('subCustomInterval').style.display = 'none';
     document.getElementById('btnDelSub').style.display = isNew ? 'none' : 'block';
-    
+
     document.getElementById('subEditModal').classList.add('active');
 }
 
@@ -947,10 +947,10 @@ async function saveSubscription() {
     const name = document.getElementById('subName').value || 'Subscription';
     const url = document.getElementById('subUrl').value.trim();
     let interval = document.getElementById('subInterval').value;
-    
+
     if (interval === 'custom') interval = document.getElementById('subCustomInterval').value;
     if (!url) return;
-    
+
     let sub;
     if (id) {
         sub = globalSettings.subscriptions.find(s => s.id === id);
@@ -959,7 +959,7 @@ async function saveSubscription() {
         sub = { id: `sub-${Date.now()}`, name, url, interval, lastUpdated: 0 };
         globalSettings.subscriptions.push(sub);
     }
-    
+
     closeSubEditModal();
     await updateSubscriptionNodes(sub);
     await window.electronAPI.saveSettings(globalSettings);
@@ -968,7 +968,7 @@ async function saveSubscription() {
 async function deleteSubscription() {
     const id = document.getElementById('subId').value;
     if (!id) return;
-    
+
     globalSettings.subscriptions = globalSettings.subscriptions.filter(s => s.id !== id);
     globalSettings.preProxies = globalSettings.preProxies.filter(p => p.groupId !== id);
     closeSubEditModal();
@@ -980,24 +980,24 @@ async function updateSubscriptionNodes(sub) {
     try {
         const content = await window.electronAPI.invoke('fetch-url', sub.url);
         let decoded = content;
-        try { if (!content.includes('://')) decoded = decodeBase64Content(content); } catch (e) {}
-        
+        try { if (!content.includes('://')) decoded = decodeBase64Content(content); } catch (e) { }
+
         const lines = decoded.split(/[\r\n]+/);
         globalSettings.preProxies = globalSettings.preProxies.filter(p => p.groupId !== sub.id);
-        
+
         let count = 0;
         lines.forEach(line => {
             line = line.trim();
             if (line && line.includes('://')) {
                 const remark = getProxyRemark(line) || `Node ${count + 1}`;
-                globalSettings.preProxies.push({ 
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9), 
-                    remark, url: line, enable: true, groupId: sub.id 
+                globalSettings.preProxies.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    remark, url: line, enable: true, groupId: sub.id
                 });
                 count++;
             }
         });
-        
+
         sub.lastUpdated = Date.now();
         showAlert(`订阅已更新：${count} 个节点`);
     } catch (e) {
@@ -1078,7 +1078,7 @@ function getProxyRemark(link) {
         } else if (link.includes('#')) {
             return decodeURIComponent(link.split('#')[1]).trim();
         }
-    } catch (e) {}
+    } catch (e) { }
     return '';
 }
 
@@ -1219,7 +1219,7 @@ function initCustomLanguageDropdown(inputId, dropdownId) {
 async function checkUpdates() {
     const btn = document.getElementById('btnUpdate');
     btn.classList.add('update-badge');
-    
+
     try {
         const appRes = await window.electronAPI.invoke('check-app-update');
         if (appRes.update) {
@@ -1228,7 +1228,7 @@ async function checkUpdates() {
             });
             return;
         }
-        
+
         const xrayRes = await window.electronAPI.invoke('check-xray-update');
         if (xrayRes.update) {
             showAlert(`发现 Xray 新版本：v${xrayRes.remote}`);
@@ -1246,17 +1246,10 @@ async function checkUpdatesSilent() {
         if (appRes.update) {
             document.getElementById('btnUpdate').classList.add('update-badge');
         }
-    } catch (e) {}
+    } catch (e) { }
 }
 
-function openGithub() {
-    window.electronAPI.invoke('open-url', 'https://github.com/EchoHS/GeekezBrowser');
-}
 
-function toggleLang() {
-    // Language toggle - simplified for new UI
-    showAlert('语言：中文 / English');
-}
 
 function showDashboard() {
     // Already on dashboard
@@ -1272,7 +1265,7 @@ function closePasswordModal() {
 function submitPassword() {
     const password = document.getElementById('backupPassword').value;
     const confirm = document.getElementById('backupPasswordConfirm').value;
-    
+
     if (!password) {
         showAlert('请输入密码');
         return;
@@ -1281,7 +1274,7 @@ function submitPassword() {
         showAlert('两次输入的密码不一致');
         return;
     }
-    
+
     closePasswordModal();
     showAlert('密码已设置');
 }
