@@ -2,9 +2,18 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - master
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
+
+  # 可选：PR 到 master 时也运行构建验证
+  pull_request:
+    branches:
+      - master
+      - main
 
 permissions:
   contents: write
