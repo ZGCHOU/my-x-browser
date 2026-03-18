@@ -80,6 +80,21 @@ app.post('/api/admin/create-user', authenticate, isAdmin, async (req, res) => {
     }
 });
 
+// 2.1 Admin: Get All Users
+app.get('/api/admin/users', authenticate, isAdmin, async (req, res) => {
+    try {
+        const [rows] = await db.execute(`
+            SELECT u.id, u.username, u.role, u.status, u.created_at, l.expire_at, l.max_profiles 
+            FROM users u
+            LEFT JOIN licenses l ON u.id = l.user_id
+            ORDER BY u.id DESC
+        `);
+        res.send({ success: true, users: rows });
+    } catch (e) {
+        res.status(500).send({ error: e.message });
+    }
+});
+
 // 3. User: Get Subscription Status (License Check)
 app.get('/api/user/status', authenticate, async (req, res) => {
     try {
