@@ -1,0 +1,37 @@
+-- Create Database
+CREATE DATABASE IF NOT EXISTS icanx_db;
+USE icanx_db;
+
+-- 1. Users Table
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'user') DEFAULT 'user',
+    status ENUM('active', 'disabled') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Licenses/Access Rights
+CREATE TABLE IF NOT EXISTS licenses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    expire_at DATETIME,
+    max_profiles INT DEFAULT 5,
+    balance DECIMAL(10, 2) DEFAULT 0.00,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 3. Audit Logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    action VARCHAR(255),
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- INSERT Initial Super Admin (username: admin, password: 123456 - Hash needs verification)
+-- IMPORTANT: Use bcrypt.hash('123456', 10) in your script to generate actual hashed passwords.
+-- For manual SQL insert, we just leave it for now.
+INSERT INTO users (username, password, role) VALUES ('admin', '$2a$10$tZ31Xh7mN5e.5WqXQ6l6v.uD7s.p.m.v.O6v6v.v.v.v.v.v.v.v.v.', 'admin'); 

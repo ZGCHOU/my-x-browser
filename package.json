@@ -25,7 +25,8 @@
       "!package-lock.json",
       "!dist",
       "!_Trash_Bin",
-      "!release"
+      "!release",
+      "!server"
     ],
     "extraResources": [
       {
