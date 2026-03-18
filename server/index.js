@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -31,10 +31,11 @@ connectDB();
 
 // --- Auth Middleware ---
 const authenticate = (req, res, next) => {
-    const token = req.headers['authorization'];
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
     if (!token) return res.status(401).send({ error: 'Auth required' });
     try {
-        const decoded = jwt.decode(token, process.env.JWT_SECRET || 'your_secret_key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
         req.user = decoded;
         next();
     } catch (e) {
@@ -60,7 +61,7 @@ app.post('/api/auth/login', async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(401).send({ error: 'Incorrect password' });
 
-        const token = jwt.encode({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET || 'your_secret_key');
+        const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET || 'your_secret_key', { expiresIn: '24h' });
         res.send({ success: true, token, user: { id: user.id, username: user.username, role: user.role } });
     } catch (e) {
         res.status(500).send({ error: e.message });
@@ -82,9 +83,14 @@ app.post('/api/admin/create-user', authenticate, isAdmin, async (req, res) => {
 // 3. User: Get Subscription Status (License Check)
 app.get('/api/user/status', authenticate, async (req, res) => {
     try {
+        // Super admins skip license check or get full access
+        if (req.user.role === 'admin') {
+            return res.send({ success: true, active: true, role: 'admin' });
+        }
+
         const [rows] = await db.execute('SELECT * FROM licenses WHERE user_id = ?', [req.user.id]);
-        if (rows.length === 0) return res.send({ active: false, message: 'No license found' });
-        res.send({ success: true, license: rows[0] });
+        if (rows.length === 0) return res.send({ success: true, active: false, message: 'No license found' });
+        res.send({ success: true, active: true, license: rows[0] });
     } catch (e) {
         res.status(500).send({ error: e.message });
     }

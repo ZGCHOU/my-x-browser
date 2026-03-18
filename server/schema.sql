@@ -34,4 +34,5 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 -- INSERT Initial Super Admin (username: admin, password: 123456 - Hash needs verification)
 -- IMPORTANT: Use bcrypt.hash('123456', 10) in your script to generate actual hashed passwords.
 -- For manual SQL insert, we just leave it for now.
-INSERT INTO users (username, password, role) VALUES ('admin', '$2a$10$tZ31Xh7mN5e.5WqXQ6l6v.uD7s.p.m.v.O6v6v.v.v.v.v.v.v.v.v.', 'admin'); 
+INSERT INTO users (username, password, role) VALUES ('admin', '$2a$10$zW/.A86yIs7O14qkDX.cjOB8ik2gLCtOgZe.Un3cG/haAjAog/NMW', 'admin'); 
+INSERT INTO `icanx_db`.`licenses` (`id`, `user_id`, `expire_at`, `max_profiles`, `balance`) VALUES (1, 1, '2099-12-31 23:59:59', 9999, 0.00);

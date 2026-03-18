@@ -21,6 +21,11 @@ async function init() {
         if (splash) splash.classList.add('hidden');
     }, 1500);
 
+    // 🔐 Check Authentication First
+    if (!await checkAuth()) {
+        return; // Wait for login
+    }
+
     // Load settings
     globalSettings = await window.electronAPI.getSettings();
     if (!globalSettings.preProxies) globalSettings.preProxies = [];
@@ -67,6 +72,115 @@ async function init() {
             importMenu.classList.remove('active');
         }
     });
+}
+
+// ============================================================================
+// Auth Flow
+// ============================================================================
+async function checkAuth() {
+    const token = localStorage.getItem('icanx_token');
+    if (!token) {
+        showLogin();
+        return false;
+    }
+
+    // Optional: Verify token with backend
+    try {
+        const res = await fetch('http://localhost:3000/api/user/status', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+            logout();
+            return false;
+        }
+        const data = await res.json();
+        if (data.success) {
+            hideLogin();
+            return true;
+        } else {
+            logout();
+            return false;
+        }
+    } catch (e) {
+        // If server is offline, we might allow local access or fail
+        // For now, if offline, we stay on login if we want strict control
+        console.error('Server offline or connection error');
+        showLogin();
+        return false;
+    }
+}
+
+function showLogin() {
+    document.getElementById('loginOverlay').classList.add('active');
+}
+
+function hideLogin() {
+    document.getElementById('loginOverlay').classList.remove('active');
+    updateSidebarUserInfo();
+}
+
+function updateSidebarUserInfo() {
+    const userJson = localStorage.getItem('icanx_user');
+    if (!userJson) return;
+
+    const user = JSON.parse(userJson);
+    document.getElementById('sidebarUserName').textContent = user.username;
+    document.getElementById('sidebarAvatar').textContent = user.username.charAt(0).toUpperCase();
+    document.getElementById('sidebarUserRole').textContent = user.role === 'admin' ? '超级管理员' : '普通用户';
+
+    // Show/Hide Admin Nav
+    const adminNav = document.getElementById('adminNavItem');
+    if (adminNav) {
+        adminNav.style.display = user.role === 'admin' ? 'flex' : 'none';
+    }
+}
+
+function openAdminPanel() {
+    showAlert('即将推出：用户管理功能。您可以直接在数据库中添加账号。');
+    // TODO: Implement User Management Modal
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    const username = document.getElementById('loginUser').value;
+    const password = document.getElementById('loginPass').value;
+    const errorEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+
+    errorEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = '登录中...';
+
+    try {
+        const response = await fetch('http://localhost:3000/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            localStorage.setItem('icanx_token', data.token);
+            localStorage.setItem('icanx_user', JSON.stringify(data.user));
+            hideLogin();
+            init(); // Re-initialize app
+        } else {
+            errorEl.textContent = data.error || '登录失败，请检查用户名和密码';
+            errorEl.style.display = 'block';
+        }
+    } catch (e) {
+        errorEl.textContent = '连接后端服务失败，请确保后端已启动';
+        errorEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '登录系统';
+    }
+}
+
+function logout() {
+    localStorage.removeItem('icanx_token');
+    localStorage.removeItem('icanx_user');
+    window.location.reload();
 }
 
 // ============================================================================
