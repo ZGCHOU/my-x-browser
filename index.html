@@ -1086,6 +1086,33 @@
             margin-bottom: 20px;
         }
 
+        .dashboard-subnav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .dashboard-subnav-btn {
+            padding: 10px 16px;
+            border-radius: var(--radius-lg);
+            font-size: 13px;
+        }
+
+        .proxy-parse-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .proxy-parse-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
         .filter-tabs {
             display: flex;
             gap: 8px;
@@ -2177,6 +2204,16 @@
             padding: 16px 24px;
         }
 
+        .proxy-candidates {
+            margin-top: 12px;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            background: var(--bg-glass-light);
+            padding: 12px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
         .proxy-item {
             display: flex;
             align-items: center;
@@ -2459,7 +2496,7 @@
             <!-- Navigation -->
             <nav class="nav-section">
                 <div class="nav-title">主菜单</div>
-                <div class="nav-item active" onclick="showDashboard()">
+                <div class="nav-item active" id="navDashboard" onclick="showDashboard()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="7" height="7" rx="2" />
                         <rect x="14" y="3" width="7" height="7" rx="2" />
@@ -2467,6 +2504,14 @@
                         <rect x="3" y="14" width="7" height="7" rx="2" />
                     </svg>
                     控制面板
+                </div>
+                <div class="nav-item" id="navProxyParse" onclick="showProxyParsePanel()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10 13a5 5 0 0 1 0-10 5 5 0 0 1 0 10Z"></path>
+                        <path d="M14 11a5 5 0 0 1 0 10 5 5 0 0 1 0-10Z"></path>
+                        <path d="M12 12h.01"></path>
+                    </svg>
+                    代理解析
                 </div>
                 <div class="nav-item" onclick="openSettings()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2607,40 +2652,74 @@
 
             <!-- Content Area -->
             <div class="content-area">
-                <!-- Filter Bar -->
-                <div class="filter-bar">
-                    <div class="filter-tabs">
-                        <button class="filter-tab active" onclick="setFilter('all')">全部</button>
-                        <button class="filter-tab" onclick="setFilter('running')">运行中</button>
-                        <button class="filter-tab" onclick="setFilter('stopped')">已停止</button>
+                <!-- Profiles View -->
+                <div id="profilesView" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+                    <!-- Filter Bar -->
+                    <div class="filter-bar">
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" onclick="setFilter('all')">全部</button>
+                            <button class="filter-tab" onclick="setFilter('running')">运行中</button>
+                            <button class="filter-tab" onclick="setFilter('stopped')">已停止</button>
+                        </div>
+                        <div class="view-toggle">
+                            <button class="view-btn active" id="viewGrid" onclick="setViewMode('grid')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                                </svg>
+                            </button>
+                            <button class="view-btn" id="viewList" onclick="setViewMode('list')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="8" y1="6" x2="21" y2="6" />
+                                    <line x1="8" y1="12" x2="21" y2="12" />
+                                    <line x1="8" y1="18" x2="21" y2="18" />
+                                    <line x1="3" y1="6" x2="3.01" y2="6" />
+                                    <line x1="3" y1="12" x2="3.01" y2="12" />
+                                    <line x1="3" y1="18" x2="3.01" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                    <div class="view-toggle">
-                        <button class="view-btn active" id="viewGrid" onclick="setViewMode('grid')">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <rect x="3" y="3" width="7" height="7" rx="1" />
-                                <rect x="14" y="3" width="7" height="7" rx="1" />
-                                <rect x="14" y="14" width="7" height="7" rx="1" />
-                                <rect x="3" y="14" width="7" height="7" rx="1" />
-                            </svg>
-                        </button>
-                        <button class="view-btn" id="viewList" onclick="setViewMode('list')">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="8" y1="6" x2="21" y2="6" />
-                                <line x1="8" y1="12" x2="21" y2="12" />
-                                <line x1="8" y1="18" x2="21" y2="18" />
-                                <line x1="3" y1="6" x2="3.01" y2="6" />
-                                <line x1="3" y1="12" x2="3.01" y2="12" />
-                                <line x1="3" y1="18" x2="3.01" y2="18" />
-                            </svg>
-                        </button>
+
+                    <!-- Profiles Container -->
+                    <div class="profiles-container" id="profileList">
+                        <!-- Profiles will be rendered here -->
                     </div>
                 </div>
 
-                <!-- Profiles Container -->
-                <div class="profiles-container" id="profileList">
-                    <!-- Profiles will be rendered here -->
+                <!-- Proxy Parse View -->
+                <div id="proxyParseView" style="flex:1; overflow:auto; display:none;">
+                    <div class="proxy-parse-header">
+                        <div class="proxy-parse-title">代理解析</div>
+                        <button class="btn btn-secondary" type="button" onclick="showProfilesView()">返回</button>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Clash 订阅链接</label>
+                        <input type="text" class="form-input" id="clashSubUrlPanel"
+                            placeholder="粘贴 Clash 订阅链接（解析为节点后可在新建环境下拉选择）">
+                    </div>
+
+                    <div style="display:flex; gap:12px; margin-top:12px; align-items:center;">
+                        <button class="btn btn-primary" type="button" style="flex:0 0 auto;"
+                            onclick="parseClashSubscriptionFromPanel()">解析并生成候选节点</button>
+                        <button class="btn btn-secondary" type="button" style="flex:0 0 auto;"
+                            onclick="clearClashParsePanel()">清空</button>
+                    </div>
+
+                    <div class="form-hint" id="clashParsePanelHint" style="margin-top:12px;">未解析</div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">解析节点列表</label>
+                        <div id="clashParsePanelNodes" class="proxy-candidates"></div>
+                        <div class="form-hint" style="margin-top:10px;">
+                            解析结果会作为“候选节点”保存，你可以在“新建环境”的下拉框里选择。
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -2698,6 +2777,13 @@
                     <textarea class="form-textarea" id="addProxy"
                         placeholder="vmess://, vless://, ss://, trojan://...（每行一个可批量创建）"></textarea>
                     <div class="form-hint">多行链接 = 批量创建环境</div>
+                </div>
+                <div class="form-group" style="margin-top:12px;">
+                    <label class="form-label">Clash 解析候选节点（可选）</label>
+                    <select class="form-select" id="addClashCandidateSelect" onchange="onAddClashCandidateSelected()">
+                        <option value="">未选择（手动填写代理链接）</option>
+                    </select>
+                    <div class="form-hint">选择后会自动追加到“代理链接”；你也可以继续手动添加其他链接</div>
                 </div>
                 <div class="form-row-3">
                     <div class="form-group">

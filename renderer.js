@@ -1,7 +1,7 @@
 // ICANX Browser - Renderer for Advanced UI
 // i18n structure moved to i18n.js and locales/
 
-let globalSettings = { preProxies: [], subscriptions: [], mode: 'single', enablePreProxy: false };
+let globalSettings = { preProxies: [], subscriptions: [], mode: 'single', enablePreProxy: false, clashCandidates: null };
 let currentEditId = null;
 let confirmCallback = null;
 let currentProxyGroup = 'manual';
@@ -10,6 +10,8 @@ let searchText = '';
 let viewMode = localStorage.getItem('icanx_view') || 'grid';
 let currentFilter = 'all';
 let runningProfiles = new Set();
+// 最近一次“Clash 订阅解析”生成的候选节点组（用于在新建环境里点选填入）
+let lastClashParsedGroupId = localStorage.getItem('icanx_last_clash_groupId') || null;
 
 // ============================================================================
 // Initialization
@@ -30,6 +32,7 @@ async function init() {
     globalSettings = await window.electronAPI.getSettings();
     if (!globalSettings.preProxies) globalSettings.preProxies = [];
     if (!globalSettings.subscriptions) globalSettings.subscriptions = [];
+    if (!globalSettings.clashCandidates) globalSettings.clashCandidates = null;
 
     // Update proxy toggle UI
     updateProxyToggle();
@@ -441,10 +444,250 @@ function openAddModal() {
     document.getElementById('addPreProxyOverride').value = 'default';
 
     document.getElementById('addModal').classList.add('active');
+    // 填充“Clash 解析候选节点”下拉框
+    renderClashCandidateSelectInModal();
 }
 
 function closeAddModal() {
     document.getElementById('addModal').classList.remove('active');
+}
+
+function renderClashCandidateSelectInModal() {
+    const select = document.getElementById('addClashCandidateSelect');
+    if (!select) return;
+
+    // Reset
+    select.innerHTML = `<option value="">未选择（手动填写代理链接）</option>`;
+
+    // 优先使用单独的 Clash 候选缓存（避免污染 preProxies 影响链式代理）
+    let nodes = [];
+    if (globalSettings.clashCandidates && Array.isArray(globalSettings.clashCandidates.nodes)) {
+        nodes = globalSettings.clashCandidates.nodes;
+    } else if (lastClashParsedGroupId) {
+        // 兼容旧数据：若之前版本把候选写进 preProxies，则做一次回退解析
+        nodes = (globalSettings.preProxies || [])
+            .filter(p => p.groupId === lastClashParsedGroupId && p.url)
+            .map(p => ({ url: p.url, remark: p.remark }));
+    }
+
+    if (!nodes || nodes.length === 0) return;
+
+    nodes = nodes.slice(0, 500);
+
+    nodes.forEach(p => {
+        const option = document.createElement('option');
+        option.value = (p.url || '').trim();
+        const protocol = (p.url || '').split('://')[0].toUpperCase();
+        const text = p.remark ? p.remark : `${protocol || 'NODE'}`;
+        option.textContent = `${text} (${protocol || 'URI'})`;
+        select.appendChild(option);
+    });
+
+    // Keep current selection if still exists
+    if (select.value && nodes.find(n => n.url.trim() === select.value)) return;
+    select.value = '';
+}
+
+function onAddClashCandidateSelected() {
+    const select = document.getElementById('addClashCandidateSelect');
+    if (!select) return;
+    const uri = (select.value || '').trim();
+    if (!uri) return;
+
+    const textarea = document.getElementById('addProxy');
+    if (!textarea) return;
+
+    const existing = textarea.value
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+    if (!existing.includes(uri)) {
+        existing.push(uri);
+        textarea.value = existing.join('\n');
+    }
+}
+
+function clearClashCandidates() {
+    lastClashParsedGroupId = null;
+    localStorage.removeItem('icanx_last_clash_groupId');
+    const container = document.getElementById('clashProxyCandidates');
+    if (container) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+    }
+    const clearBtn = document.getElementById('btnClearClashCandidates');
+    if (clearBtn) clearBtn.style.display = 'none';
+}
+
+function renderClashProxyCandidates() {
+    const container = document.getElementById('clashProxyCandidates');
+    const clearBtn = document.getElementById('btnClearClashCandidates');
+    if (!container) return;
+
+    if (!lastClashParsedGroupId) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+        return;
+    }
+
+    const nodes = (globalSettings.preProxies || [])
+        .filter(p => p.groupId === lastClashParsedGroupId && p.enable !== false);
+
+    if (!nodes || nodes.length === 0) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+        return;
+    }
+
+    if (clearBtn) clearBtn.style.display = 'block';
+    container.style.display = 'block';
+    container.innerHTML = nodes.map(p => {
+        const protocol = (p.url || '').split('://')[0].toUpperCase();
+        const remark = p.remark || 'Node';
+        return `
+            <div class="proxy-item" style="padding:10px 12px; margin-bottom:8px;">
+                <span class="proxy-protocol">${escapeHtml(protocol)}</span>
+                <span class="proxy-name" style="min-width:0; word-break:break-word;">${escapeHtml(remark)}</span>
+                <div class="proxy-actions">
+                    <button class="btn btn-secondary" type="button"
+                        style="padding:6px 10px; font-size:12px;"
+                        onclick="setAddProxyFromClashCandidate('${p.id}', 'replace')">填入</button>
+                    <button class="btn btn-secondary" type="button"
+                        style="padding:6px 10px; font-size:12px;"
+                        onclick="setAddProxyFromClashCandidate('${p.id}', 'append')">追加</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function setAddProxyFromClashCandidate(proxyId, mode) {
+    const node = (globalSettings.preProxies || []).find(p => p.id === proxyId);
+    if (!node) return;
+
+    const textarea = document.getElementById('addProxy');
+    if (!textarea) return;
+
+    const uri = (node.url || '').trim();
+    if (!uri) return;
+
+    if (mode === 'replace') {
+        textarea.value = uri;
+        return;
+    }
+
+    const existing = textarea.value
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+    if (!existing.includes(uri)) existing.push(uri);
+    textarea.value = existing.join('\n');
+}
+
+async function parseClashSubscriptionFromHome() {
+    const urlInput = document.getElementById('addClashSubUrl');
+    if (!urlInput) return;
+    const url = urlInput.value.trim();
+    if (!url) {
+        showAlert('请输入 Clash 订阅链接');
+        return;
+    }
+
+    try {
+        const res = await window.electronAPI.invoke('parse-clash-sub', url);
+        const nodes = res && Array.isArray(res.nodes) ? res.nodes : [];
+        if (nodes.length === 0) {
+            showAlert('Clash 解析成功，但未识别到可用节点');
+            return;
+        }
+
+        const groupId = `clash-${Date.now()}`;
+        globalSettings.preProxies = globalSettings.preProxies || [];
+
+        let added = 0;
+        nodes.forEach(n => {
+            if (!n || !n.url) return;
+            globalSettings.preProxies.push({
+                id: `clashnode-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                remark: n.remark || 'Clash Node',
+                url: n.url.trim(),
+                enable: true,
+                groupId
+            });
+            added++;
+        });
+
+        await window.electronAPI.saveSettings(globalSettings);
+        updateProxyToggle();
+
+        lastClashParsedGroupId = groupId;
+        localStorage.setItem('icanx_last_clash_groupId', groupId);
+        renderClashProxyCandidates();
+
+        showAlert(`Clash 解析成功：${added} 个候选节点`);
+    } catch (e) {
+        showAlert('解析失败：' + e.message);
+    }
+}
+
+async function parseClashSubscriptionFromSidebar() {
+    const urlInput = document.getElementById('clashSubUrlSidebar');
+    if (!urlInput) return;
+
+    const url = urlInput.value.trim();
+    if (!url) {
+        showAlert('请输入 Clash 订阅链接');
+        return;
+    }
+
+    try {
+        const res = await window.electronAPI.invoke('parse-clash-sub', url);
+        const nodes = res && Array.isArray(res.nodes) ? res.nodes : [];
+        if (nodes.length === 0) {
+            showAlert('Clash 解析成功，但未识别到可用节点');
+            return;
+        }
+
+        const newGroupId = `clash-${Date.now()}`;
+
+        // 兼容清理：如果之前版本把候选写进了 preProxies（且 enable 影响链路），这里做一次清理
+        if (lastClashParsedGroupId) {
+            globalSettings.preProxies = (globalSettings.preProxies || []).filter(p => p.groupId !== lastClashParsedGroupId);
+        }
+
+        globalSettings.clashCandidates = {
+            groupId: newGroupId,
+            nodes: nodes
+                .filter(n => n && n.url)
+                .map(n => ({
+                    id: `clashnode-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                    remark: n.remark || 'Clash Node',
+                    url: n.url.trim()
+                }))
+        };
+
+        await window.electronAPI.saveSettings(globalSettings);
+
+        lastClashParsedGroupId = newGroupId;
+        localStorage.setItem('icanx_last_clash_groupId', newGroupId);
+
+        const hint = document.getElementById('clashSidebarHint');
+        if (hint) hint.textContent = `已解析：${nodes.length} 个候选`;
+
+        // 如果新建环境弹窗已打开，刷新下拉候选
+        const addModal = document.getElementById('addModal');
+        if (addModal && addModal.classList.contains('active')) {
+            renderClashCandidateSelectInModal();
+        }
+
+        showAlert(`Clash 解析成功：${nodes.length} 个候选节点`);
+    } catch (e) {
+        showAlert('解析失败：' + e.message);
+    }
 }
 
 async function saveNewProfile() {
@@ -1373,7 +1616,139 @@ async function checkUpdatesSilent() {
 
 
 function showDashboard() {
-    // Already on dashboard
+    showProfilesView();
+}
+
+// ============================================================================
+// Proxy Parse View (Dashboard)
+// ============================================================================
+function showProxyParsePanel() {
+    const profilesView = document.getElementById('profilesView');
+    const proxyParseView = document.getElementById('proxyParseView');
+    if (profilesView) profilesView.style.display = 'none';
+    if (proxyParseView) proxyParseView.style.display = 'block';
+
+    const navDashboard = document.getElementById('navDashboard');
+    const navProxyParse = document.getElementById('navProxyParse');
+    if (navDashboard) navDashboard.classList.remove('active');
+    if (navProxyParse) navProxyParse.classList.add('active');
+}
+
+function showProfilesView() {
+    const profilesView = document.getElementById('profilesView');
+    const proxyParseView = document.getElementById('proxyParseView');
+    if (proxyParseView) proxyParseView.style.display = 'none';
+    if (profilesView) profilesView.style.display = 'flex';
+
+    const navDashboard = document.getElementById('navDashboard');
+    const navProxyParse = document.getElementById('navProxyParse');
+    if (navProxyParse) navProxyParse.classList.remove('active');
+    if (navDashboard) navDashboard.classList.add('active');
+}
+
+function renderClashParsePanelNodes() {
+    const container = document.getElementById('clashParsePanelNodes');
+    const hint = document.getElementById('clashParsePanelHint');
+    if (!container) return;
+
+    const nodes = globalSettings.clashCandidates?.nodes || [];
+    if (!nodes.length) {
+        container.innerHTML = '';
+        if (hint) hint.textContent = '未解析';
+        return;
+    }
+
+    const limited = nodes.slice(0, 200);
+    container.innerHTML = limited.map(n => {
+        const uri = (n.url || '').trim();
+        const protocol = uri.split('://')[0].toUpperCase();
+        const remark = n.remark || 'Node';
+        const shortUri = uri.length > 70 ? uri.slice(0, 70) + '...' : uri;
+        return `
+            <div class="proxy-item" style="padding:10px 12px; margin-bottom:8px;">
+                <span class="proxy-protocol">${escapeHtml(protocol || 'URI')}</span>
+                <span class="proxy-name" style="min-width:0; word-break:break-word;">${escapeHtml(remark)}</span>
+                <div style="font-size:12px; color:var(--text-tertiary); word-break:break-all; margin-left:10px; max-width:45%;">
+                    <span title="${escapeHtml(uri)}">${escapeHtml(shortUri)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (hint) hint.textContent = `已解析：${nodes.length} 个候选节点（展示前 ${limited.length} 个）`;
+}
+
+async function parseClashSubscriptionFromPanel() {
+    const urlInput = document.getElementById('clashSubUrlPanel');
+    if (!urlInput) return;
+    const url = urlInput.value.trim();
+    if (!url) {
+        showAlert('请输入 Clash 订阅链接');
+        return;
+    }
+
+    try {
+        const res = await window.electronAPI.invoke('parse-clash-sub', url);
+        const nodes = res && Array.isArray(res.nodes) ? res.nodes : [];
+        if (nodes.length === 0) {
+            showAlert('Clash 解析成功，但未识别到可用节点');
+            renderClashParsePanelNodes();
+            return;
+        }
+
+        const newGroupId = `clash-${Date.now()}`;
+
+        // 兼容清理：如果历史版本把候选写进了 preProxies，则清理该组，避免链式代理被污染
+        if (lastClashParsedGroupId) {
+            globalSettings.preProxies = (globalSettings.preProxies || []).filter(p => p.groupId !== lastClashParsedGroupId);
+        }
+
+        globalSettings.clashCandidates = {
+            groupId: newGroupId,
+            nodes: nodes
+                .filter(n => n && n.url)
+                .map(n => ({
+                    id: `clashnode-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                    remark: n.remark || 'Clash Node',
+                    url: n.url.trim()
+                }))
+        };
+
+        await window.electronAPI.saveSettings(globalSettings);
+        updateProxyToggle();
+
+        lastClashParsedGroupId = newGroupId;
+        localStorage.setItem('icanx_last_clash_groupId', newGroupId);
+
+        renderClashParsePanelNodes();
+
+        // 如果新建环境弹窗打开了，刷新下拉框候选
+        const addModal = document.getElementById('addModal');
+        if (addModal && addModal.classList.contains('active')) {
+            renderClashCandidateSelectInModal();
+        }
+
+        showAlert(`Clash 解析成功：${nodes.length} 个候选节点`);
+    } catch (e) {
+        showAlert('解析失败：' + e.message);
+    }
+}
+
+async function clearClashParsePanel() {
+    const oldGroupId = lastClashParsedGroupId;
+    globalSettings.clashCandidates = null;
+    lastClashParsedGroupId = null;
+    localStorage.removeItem('icanx_last_clash_groupId');
+
+    // 兼容清理：仅删除旧版本写入的 clash 候选 groupId
+    if (oldGroupId) {
+        globalSettings.preProxies = (globalSettings.preProxies || []).filter(p => p.groupId !== oldGroupId);
+    }
+
+    await window.electronAPI.saveSettings(globalSettings);
+    updateProxyToggle();
+    renderClashParsePanelNodes();
+    showAlert('已清空解析结果');
 }
 
 // Theme Toggle logic

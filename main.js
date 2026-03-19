@@ -1022,6 +1022,281 @@ app.whenReady().then(async () => {
 // IPC Handles
 ipcMain.handle('get-app-info', () => { return { name: app.getName(), version: app.getVersion() }; });
 ipcMain.handle('fetch-url', async (e, url) => { try { const res = await fetch(url); if (!res.ok) throw new Error('HTTP ' + res.status); return await res.text(); } catch (e) { throw e.message; } });
+
+// ============================================================================
+// Clash Subscription Parsing
+// ============================================================================
+function decodeBase64UrlSafe(str) {
+    const s = (str || '').trim();
+    if (!s) return '';
+    const normalized = s.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = normalized.length % 4;
+    const padded = pad ? normalized + '='.repeat(4 - pad) : normalized;
+    return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+function safeYamlLoad(content) {
+    try { return yaml.load(content); } catch (e) { return null; }
+}
+
+function toVmessUri(p) {
+    const server = p.server || p.address;
+    const port = parseInt(p.port, 10);
+    const uuid = p.uuid || p.id;
+    if (!server || !port || !uuid) return null;
+
+    const netRaw = p.network || (p['ws-path'] ? 'ws' : p['grpc-service-name'] ? 'grpc' : 'tcp');
+    const net = String(netRaw || 'tcp');
+
+    const tlsEnabled = p.tls === true || p.tls === 'true' || p.tls === 'tls';
+    const tls = tlsEnabled ? 'tls' : 'none';
+
+    const wsPath = p['ws-path'] || p.wsPath || p.path;
+    const grpcServiceName = p['grpc-service-name'] || p.grpcServiceName;
+    const wsHeaders = p['ws-headers'] || p.wsHeaders || {};
+    const wsHost = wsHeaders.Host || wsHeaders.host || p.host;
+
+    const sni = p.sni || p.servername || p['server-name'] || wsHost || server;
+    const host = wsHost || p.host || sni || server;
+
+    const alterId = parseInt(p.alterId ?? p.aid ?? 0, 10);
+    const aid = Number.isNaN(alterId) ? 0 : alterId;
+    const cipher = p.cipher || p.scy || 'auto';
+
+    const vmess = {
+        v: '2',
+        ps: p.name || 'Clash VMess',
+        add: server,
+        port: String(port),
+        id: uuid,
+        aid,
+        scy: cipher,
+        net,
+        tls,
+        host,
+        path: wsPath || grpcServiceName,
+        sni,
+        // Keep some optional fields so parseProxyLink can build transport settings.
+        alpn: p.alpn,
+        type: p.type || 'none',
+        fp: p.fp || 'chrome'
+    };
+
+    // Remove undefined values (clean output for base64 decode)
+    Object.keys(vmess).forEach(k => { if (vmess[k] === undefined) delete vmess[k]; });
+
+    const b64 = Buffer.from(JSON.stringify(vmess), 'utf8').toString('base64');
+    return `vmess://${b64}`;
+}
+
+function toVlessUri(p) {
+    const server = p.server || p.address;
+    const port = parseInt(p.port, 10);
+    const uuid = p.uuid || p.id;
+    if (!server || !port || !uuid) return null;
+
+    const name = p.name || 'Clash VLESS';
+    const reality = p['reality-opts'] || p.reality || null;
+    const tlsEnabled = p.tls === true || p.tls === 'true' || p.tls === 'tls';
+
+    let security = tlsEnabled ? 'tls' : 'none';
+    if (reality && (reality['public-key'] || reality.publicKey)) security = 'reality';
+
+    const typeRaw = p.network || (p['ws-path'] ? 'ws' : p['grpc-service-name'] ? 'grpc' : 'tcp');
+    const type = String(typeRaw || 'tcp');
+
+    const encryption = p.encryption || p.cipher || 'none';
+    const flow = p.flow || '';
+
+    const params = new URLSearchParams();
+    params.set('security', security);
+    params.set('type', type);
+    if (encryption) params.set('encryption', encryption);
+    if (flow) params.set('flow', flow);
+
+    const sni = p.sni || p.servername || p['server-name'];
+    if (sni) params.set('sni', sni);
+
+    if (type === 'ws') {
+        const path = p['ws-path'] || p.wsPath || '/';
+        const wsHeaders = p['ws-headers'] || p.wsHeaders || {};
+        const host = wsHeaders.Host || wsHeaders.host || p.host;
+        if (path) params.set('path', path);
+        if (host) params.set('host', host);
+    } else if (type === 'grpc') {
+        const serviceName = p['grpc-service-name'] || p.grpcServiceName;
+        if (serviceName) params.set('serviceName', serviceName);
+    }
+
+    if (security === 'reality' && reality) {
+        const fp = reality.fingerprint || reality.fp || 'chrome';
+        const realitySni = reality['server-name'] || reality.serverName || sni || '';
+        const pbk = reality['public-key'] || reality.publicKey || '';
+        const sid = reality['short-id'] || reality.shortId || '';
+        const spx = reality['spider-x'] || reality.spiderX || '';
+
+        params.set('fp', fp);
+        if (realitySni) params.set('sni', realitySni);
+        if (pbk) params.set('pbk', pbk);
+        if (sid) params.set('sid', sid);
+        if (spx) params.set('spx', spx);
+    }
+
+    const q = params.toString();
+    return `vless://${uuid}@${server}:${port}?${q}#${encodeURIComponent(name)}`;
+}
+
+function toTrojanUri(p) {
+    const server = p.server || p.address;
+    const port = parseInt(p.port, 10);
+    const password = p.password || p.pass || p['auth-password'];
+    if (!server || !port || !password) return null;
+
+    const name = p.name || 'Clash Trojan';
+    const tlsEnabled = p.tls === true || p.tls === 'true' || p.tls === 'tls';
+    const security = tlsEnabled ? 'tls' : 'none';
+
+    const typeRaw = p.network || (p['ws-path'] ? 'ws' : p['grpc-service-name'] ? 'grpc' : 'tcp');
+    const type = String(typeRaw || 'tcp');
+
+    const params = new URLSearchParams();
+    params.set('security', security);
+    params.set('type', type);
+
+    const sni = p.sni || p.servername || p['server-name'];
+    if (sni) params.set('sni', sni);
+
+    if (type === 'ws') {
+        const path = p['ws-path'] || p.wsPath || '/';
+        const wsHeaders = p['ws-headers'] || p.wsHeaders || {};
+        const host = wsHeaders.Host || wsHeaders.host || p.host;
+        if (path) params.set('path', path);
+        if (host) params.set('host', host);
+    } else if (type === 'grpc') {
+        const serviceName = p['grpc-service-name'] || p.grpcServiceName;
+        if (serviceName) params.set('serviceName', serviceName);
+    }
+
+    const q = params.toString();
+    return `trojan://${password}@${server}:${port}?${q}#${encodeURIComponent(name)}`;
+}
+
+function toSsUri(p) {
+    const server = p.server || p.address;
+    const port = parseInt(p.port, 10);
+    const method = p.cipher || p.method;
+    const password = p.password || p.pass;
+    if (!server || !port || !method || password === undefined) return null;
+
+    const name = p.name || 'Clash SS';
+    const raw = `${method}:${password}`;
+    const b64 = Buffer.from(raw, 'utf8').toString('base64');
+    const safeB64 = b64.replace(/\+/g, '-').replace(/\//g, '_');
+
+    return `ss://${safeB64}@${server}:${port}#${encodeURIComponent(name)}`;
+}
+
+function convertClashProxyToUri(proxy) {
+    if (!proxy || typeof proxy !== 'object') return null;
+    const type = proxy.type || proxy.protocol;
+    const t = String(type || '').toLowerCase();
+
+    if (t === 'vmess') return { remark: proxy.name || 'Clash VMess', url: toVmessUri(proxy) };
+    if (t === 'vless') return { remark: proxy.name || 'Clash VLESS', url: toVlessUri(proxy) };
+    if (t === 'trojan') return { remark: proxy.name || 'Clash Trojan', url: toTrojanUri(proxy) };
+    if (t === 'ss' || t === 'shadowsocks') return { remark: proxy.name || 'Clash SS', url: toSsUri(proxy) };
+
+    return null;
+}
+
+function getRemarkFromUri(uri) {
+    if (!uri) return '';
+    const u = String(uri).trim();
+    try {
+        if (u.includes('#')) return decodeURIComponent(u.split('#')[1]).trim();
+        if (u.startsWith('vmess://')) {
+            const base64Str = u.replace('vmess://', '');
+            const configStr = decodeBase64UrlSafe(base64Str);
+            const vmess = JSON.parse(configStr);
+            return vmess.ps || '';
+        }
+    } catch (e) { return ''; }
+    return '';
+}
+
+function parseUriListToNodes(content) {
+    const text = String(content || '');
+    if (!text.includes('://')) return [];
+
+    const nodes = [];
+    const lines = text.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
+    lines.forEach(line => {
+        if (!line || !line.includes('://')) return;
+        // Accept common proxy URI schemes.
+        if (!/^(vmess|vless|trojan|ss|socks)\:\/\//i.test(line)) return;
+        nodes.push({ remark: getRemarkFromUri(line) || 'Node', url: line });
+    });
+    return nodes;
+}
+
+ipcMain.handle('parse-clash-sub', async (e, url) => {
+    try {
+        if (!url) throw new Error('缺少 Clash 订阅链接');
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        const content = await res.text();
+
+        // 1) Clash 订阅有时返回的是“base64 包裹的 URI 列表”（比如 trojan://...）
+        // 先做 URI 列表兜底解析，避免把它当 YAML 失败。
+        const uriCandidates = [content, decodeBase64UrlSafe(content)];
+        for (const candidate of uriCandidates) {
+            const nodes = parseUriListToNodes(candidate);
+            if (nodes.length > 0) return { nodes, count: nodes.length };
+        }
+
+        // 2) 兜底：尝试解析 Clash YAML（直接或 base64 解码后）
+        // Try parse as YAML directly; if not, try URL-safe base64 decode.
+        let root = safeYamlLoad(content);
+        if (!root) {
+            const decoded = decodeBase64UrlSafe(content);
+            root = safeYamlLoad(decoded);
+        }
+
+        if (!root) throw new Error('Clash YAML 解析失败且未识别到 URI 列表');
+
+        let proxies = [];
+        if (Array.isArray(root)) proxies = root;
+        else if (Array.isArray(root.proxies)) proxies = root.proxies;
+        else if (Array.isArray(root.Proxy)) proxies = root.Proxy;
+
+        if (!Array.isArray(proxies) || proxies.length === 0) {
+            // Sometimes subscription YAML includes a wrapper
+            // Attempt to find a first-level proxies array.
+            if (root && typeof root === 'object') {
+                for (const k of Object.keys(root)) {
+                    if (Array.isArray(root[k]) && k.toLowerCase() === 'proxies') {
+                        proxies = root[k];
+                        break;
+                    }
+                }
+            }
+        }
+
+        const nodes = [];
+        proxies.forEach(p => {
+            const node = convertClashProxyToUri(p);
+            if (node && node.url) {
+                nodes.push({ remark: node.remark, url: node.url });
+            }
+        });
+
+        return { nodes, count: nodes.length };
+    } catch (err) {
+        throw err.message || String(err);
+    }
+});
 ipcMain.handle('test-proxy-latency', async (e, proxyStr) => {
     const tempPort = await getPort(); const tempConfigPath = path.join(app.getPath('userData'), `test_config_${tempPort}.json`);
     try {
