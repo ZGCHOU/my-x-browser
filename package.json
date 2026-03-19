@@ -107,6 +107,7 @@
   "dependencies": {
     "@puppeteer/browsers": "^2.10.13",
     "adm-zip": "^0.5.16",
+    "echarts": "^6.0.0",
     "fs-extra": "^11.3.2",
     "get-port": "^5.1.1",
     "js-base64": "^3.7.8",
@@ -118,10 +119,11 @@
     "sql.js": "^1.14.1",
     "tcp-ping": "^0.1.1",
     "tree-kill": "^1.2.2",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "vue-echarts": "^8.0.1"
   },
   "devDependencies": {
-    "electron": "^39.0.0",
+    "electron": "^24.8.8",
     "electron-builder": "^24.13.3"
   },
   "puppeteer": {

@@ -1,7 +1,7 @@
 <template>
   <div class="login-page">
     <div class="login-container">
-      <div class="logo">ICANX</div>
+      <div class="logo-box">I</div>
       <h1>管理后台</h1>
       <p class="subtitle">超级管理员登录以进行系统管理</p>
 
@@ -77,13 +77,19 @@ const handleLogin = async () => {
   text-align: center;
 }
 
-.logo {
-  font-size: 32px;
-  font-weight: 900;
+.logo-box {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
   background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
 }
 
 h1 {
