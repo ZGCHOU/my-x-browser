@@ -33,9 +33,14 @@ async function init() {
     if (!globalSettings.preProxies) globalSettings.preProxies = [];
     if (!globalSettings.subscriptions) globalSettings.subscriptions = [];
     if (!globalSettings.clashCandidates) globalSettings.clashCandidates = null;
+    if (!lastClashParsedGroupId && globalSettings.clashCandidates?.groupId) {
+        lastClashParsedGroupId = globalSettings.clashCandidates.groupId;
+        localStorage.setItem('icanx_last_clash_groupId', lastClashParsedGroupId);
+    }
 
     // Update proxy toggle UI
     updateProxyToggle();
+    renderClashParsePanelNodes();
 
     // Load profiles
     await loadProfiles();
@@ -1632,6 +1637,8 @@ function showProxyParsePanel() {
     const navProxyParse = document.getElementById('navProxyParse');
     if (navDashboard) navDashboard.classList.remove('active');
     if (navProxyParse) navProxyParse.classList.add('active');
+
+    renderClashParsePanelNodes();
 }
 
 function showProfilesView() {
