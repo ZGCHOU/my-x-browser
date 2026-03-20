@@ -7,6 +7,10 @@
           <UsersIcon size="18" />
           <span>用户管理</span>
         </div>
+        <div :class="['nav-item', { active: currentView === 'tags' }]" @click="currentView = 'tags'">
+          <TagIcon size="18" />
+          <span>标签管理</span>
+        </div>
         <div :class="['nav-item', { active: currentView === 'stats' }]" @click="currentView = 'stats'">
           <BarChart3Icon size="18" />
           <span>数据统计</span>
@@ -76,9 +80,17 @@
         <div class="user-list">
           <div class="list-header">
             <h3>用户列表</h3>
-            <div class="search-box">
-              <SearchIcon size="16" />
-              <input v-model="searchQuery" type="text" placeholder="搜索用户名..." />
+            <div class="filter-box">
+              <div class="search-box">
+                <SearchIcon size="16" />
+                <input v-model="searchQuery" type="text" placeholder="搜索用户名..." />
+              </div>
+              <div class="tag-filter" v-if="allTags.length > 0">
+                <select v-model="selectedTagFilter" class="input-field">
+                  <option value="">所有标签</option>
+                  <option v-for="tag in allTags" :key="tag.id" :value="tag.id">{{ tag.name }}</option>
+                </select>
+              </div>
             </div>
           </div>
           <table>
@@ -86,6 +98,7 @@
               <tr>
                 <th>ID</th>
                 <th>用户名</th>
+                <th>标签</th>
                 <th>角色</th>
                 <th>状态</th>
                 <th>授权截止</th>
@@ -100,6 +113,19 @@
                 <td>
                   <div class="user-info">
                     <span class="username">{{ user.username }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="user-tags">
+                    <span 
+                      v-for="tag in user.tags" 
+                      :key="tag.id" 
+                      class="tag-badge"
+                      :style="{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color + '40' }"
+                    >
+                      {{ tag.name }}
+                    </span>
+                    <span v-if="!user.tags || user.tags.length === 0" class="no-tags">-</span>
                   </div>
                 </td>
                 <td>
@@ -130,6 +156,46 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- 标签管理视图 -->
+      <div v-else-if="currentView === 'tags'" class="tags-view">
+        <header>
+          <div>
+            <h1>标签管理</h1>
+            <p class="subtitle">管理用户分类标签</p>
+          </div>
+          <button @click="openAddTagModal" class="btn btn-primary">
+            <PlusIcon size="18" />
+            创建标签
+          </button>
+        </header>
+
+        <!-- 标签列表 -->
+        <div class="tags-list">
+          <div class="list-header">
+            <h3>所有标签</h3>
+          </div>
+          <div class="tags-grid">
+            <div v-for="tag in allTags" :key="tag.id" class="tag-card">
+              <div class="tag-info">
+                <span class="tag-color-dot" :style="{ backgroundColor: tag.color }"></span>
+                <span class="tag-name">{{ tag.name }}</span>
+              </div>
+              <div class="tag-actions">
+                <button @click="editTag(tag)" class="btn-icon" title="编辑">
+                  <Edit2Icon size="16" />
+                </button>
+                <button @click="confirmDeleteTag(tag)" class="btn-icon delete" title="删除">
+                  <Trash2Icon size="16" />
+                </button>
+              </div>
+            </div>
+            <div v-if="allTags.length === 0" class="empty-state">
+              <p>暂无标签，点击右上角创建</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -260,6 +326,36 @@
               </select>
             </div>
             
+            <!-- 标签选择 -->
+            <div class="form-group">
+              <label>标签</label>
+              <div class="tag-selector">
+                <div class="tag-options">
+                  <label 
+                    v-for="tag in allTags" 
+                    :key="tag.id" 
+                    class="tag-option"
+                    :class="{ selected: newUser.selectedTags?.includes(tag.id) }"
+                    :style="{ 
+                      backgroundColor: newUser.selectedTags?.includes(tag.id) ? tag.color + '30' : 'transparent',
+                      borderColor: tag.color,
+                      color: newUser.selectedTags?.includes(tag.id) ? tag.color : 'var(--text-secondary)'
+                    }"
+                  >
+                    <input 
+                      type="checkbox" 
+                      :value="tag.id" 
+                      v-model="newUser.selectedTags"
+                      class="hidden-checkbox"
+                    />
+                    <span class="tag-color-dot-small" :style="{ backgroundColor: tag.color }"></span>
+                    {{ tag.name }}
+                  </label>
+                </div>
+                <p v-if="allTags.length === 0" class="hint">暂无标签，请先创建标签</p>
+              </div>
+            </div>
+            
             <div v-if="newUser.role === 'user'" class="license-section">
               <h4>访问权限设置</h4>
               
@@ -324,6 +420,35 @@
               <small v-if="editUserData.id === 1" class="hint">超级管理员不可禁用</small>
             </div>
             
+            <div class="form-group">
+              <label>标签</label>
+              <div class="tag-selector">
+                <div class="tag-options">
+                  <label 
+                    v-for="tag in allTags" 
+                    :key="tag.id" 
+                    class="tag-option"
+                    :class="{ selected: editUserData.selectedTags?.includes(tag.id) }"
+                    :style="{ 
+                      backgroundColor: editUserData.selectedTags?.includes(tag.id) ? tag.color + '30' : 'transparent',
+                      borderColor: tag.color,
+                      color: editUserData.selectedTags?.includes(tag.id) ? tag.color : 'var(--text-secondary)'
+                    }"
+                  >
+                    <input 
+                      type="checkbox" 
+                      :value="tag.id" 
+                      v-model="editUserData.selectedTags"
+                      class="hidden-checkbox"
+                    />
+                    <span class="tag-color-dot-small" :style="{ backgroundColor: tag.color }"></span>
+                    {{ tag.name }}
+                  </label>
+                </div>
+                <p v-if="allTags.length === 0" class="hint">暂无标签，请先创建标签</p>
+              </div>
+            </div>
+            
             <div v-if="editUserData.role === 'user'" class="license-section">
               <h4>访问权限设置</h4>
               
@@ -371,6 +496,60 @@
         </div>
       </div>
       
+      <!-- 标签管理弹窗 -->
+      <div v-if="showTagModal" class="modal-overlay" @click.self="showTagModal = false">
+        <div class="modal">
+          <h2>{{ isEditingTag ? '编辑标签' : '创建标签' }}</h2>
+          <form @submit.prevent="isEditingTag ? updateTag() : createTag()">
+            <div class="form-group">
+              <label>标签名称 <span class="required">*</span></label>
+              <input v-model="tagForm.name" class="input-field" placeholder="请输入标签名称" required />
+            </div>
+            
+            <div class="form-group">
+              <label>标签颜色</label>
+              <div class="color-picker">
+                <label 
+                  v-for="color in presetColors" 
+                  :key="color"
+                  class="color-option"
+                  :class="{ selected: tagForm.color === color }"
+                  :style="{ backgroundColor: color }"
+                >
+                  <input type="radio" :value="color" v-model="tagForm.color" class="hidden-radio" />
+                  <CheckCircleIcon v-if="tagForm.color === color" size="16" class="color-check" />
+                </label>
+              </div>
+            </div>
+            
+            <div class="modal-footer">
+              <button @click="showTagModal = false" type="button" class="btn">取消</button>
+              <button type="submit" class="btn btn-primary" :disabled="savingTag">
+                {{ savingTag ? '保存中...' : '保存' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- 删除标签确认弹窗 -->
+      <div v-if="showDeleteTagModal" class="modal-overlay" @click.self="showDeleteTagModal = false">
+        <div class="modal modal-confirm">
+          <div class="confirm-icon">
+            <AlertTriangleIcon size="48" class="text-error" />
+          </div>
+          <h2>确认删除标签</h2>
+          <p>确定要删除标签 <strong>{{ tagToDelete?.name }}</strong> 吗？</p>
+          <p class="warning-text">此操作不可恢复，已分配给用户的该标签将被移除。</p>
+          <div class="modal-footer">
+            <button @click="showDeleteTagModal = false" class="btn">取消</button>
+            <button @click="deleteTag" class="btn btn-danger" :disabled="deletingTag">
+              {{ deletingTag ? '删除中...' : '确认删除' }}
+            </button>
+          </div>
+        </div>
+      </div>
+      
       <!-- Toast 提示 -->
       <div v-if="toast.show" :class="['toast', toast.type]">
         <div class="toast-icon">
@@ -402,7 +581,9 @@ import {
   AlertCircleIcon,
   AlertTriangleIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  TagIcon,
+  XIcon
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -413,6 +594,8 @@ const auditLogs = ref([]);
 const searchQuery = ref('');
 const currentPage = ref(1);
 const pageSize = 20;
+const allTags = ref([]);
+const selectedTagFilter = ref('');
 
 // 弹窗状态
 const showAddModal = ref(false);
@@ -421,6 +604,23 @@ const showDeleteModal = ref(false);
 const creating = ref(false);
 const updating = ref(false);
 const deleting = ref(false);
+
+// 标签弹窗状态
+const showTagModal = ref(false);
+const showDeleteTagModal = ref(false);
+const isEditingTag = ref(false);
+const savingTag = ref(false);
+const deletingTag = ref(false);
+const tagForm = ref({ name: '', color: '#6366f1' });
+const tagToDelete = ref(null);
+
+// 预设颜色
+const presetColors = [
+  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
+  '#ef4444', '#f97316', '#f59e0b', '#eab308',
+  '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+  '#06b6d4', '#0ea5e9', '#3b82f6', '#64748b'
+];
 
 // Toast 提示
 const toast = ref({
@@ -454,7 +654,8 @@ const newUser = ref({
   role: 'user',
   expire_at: '',
   max_profiles: 5,
-  balance: 0
+  balance: 0,
+  selectedTags: []
 });
 
 const editUserData = ref({});
@@ -464,11 +665,25 @@ const adminUser = JSON.parse(localStorage.getItem('icanx_admin_user') || '{}');
 
 // 计算属性：过滤用户
 const filteredUsers = computed(() => {
-  if (!searchQuery.value) return users.value;
-  const query = searchQuery.value.toLowerCase();
-  return users.value.filter(user => 
-    user.username.toLowerCase().includes(query)
-  );
+  let result = users.value;
+  
+  // 按用户名搜索
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(user => 
+      user.username.toLowerCase().includes(query)
+    );
+  }
+  
+  // 按标签筛选
+  if (selectedTagFilter.value) {
+    const tagId = parseInt(selectedTagFilter.value);
+    result = result.filter(user => 
+      user.tags && user.tags.some(tag => tag.id === tagId)
+    );
+  }
+  
+  return result;
 });
 
 // 获取用户列表
@@ -478,6 +693,16 @@ const fetchUsers = async () => {
     users.value = response.data.users;
   } catch (err) {
     alert('获取用户列表失败: ' + err.message);
+  }
+};
+
+// 获取所有标签
+const fetchTags = async () => {
+  try {
+    const response = await axios.get('/api/admin/tags');
+    allTags.value = response.data.tags;
+  } catch (err) {
+    console.error('获取标签列表失败', err);
   }
 };
 
@@ -514,14 +739,28 @@ const createUser = async () => {
       newUser.value.expire_at = date.toISOString().slice(0, 16);
     }
 
-    await axios.post('/api/admin/users', newUser.value);
+    const userData = { ...newUser.value };
+    const selectedTags = userData.selectedTags || [];
+    delete userData.selectedTags;
+
+    // 创建用户
+    const response = await axios.post('/api/admin/users', userData);
+    const userId = response.data.userId;
+    
+    // 添加标签关联
+    if (selectedTags.length > 0 && userId) {
+      await axios.put(`/api/admin/users/${userId}/tags`, {
+        tags: selectedTags
+      });
+    }
+    
     await fetchUsers();
     await fetchStats();
     showAddModal.value = false;
     resetNewUser();
     showToast('用户创建成功', 'success');
   } catch (err) {
-    showToast('创建失败: ' + err.message, 'error');
+    showToast('创建失败: ' + (err.response?.data?.error || err.message), 'error');
   } finally {
     creating.value = false;
   }
@@ -532,7 +771,8 @@ const editUser = (user) => {
   editUserData.value = {
     ...user,
     password: '',
-    expire_at: user.expire_at ? formatDateTimeLocal(user.expire_at) : ''
+    expire_at: user.expire_at ? formatDateTimeLocal(user.expire_at) : '',
+    selectedTags: user.tags ? user.tags.map(t => t.id) : []
   };
   showEditModal.value = true;
 };
@@ -546,7 +786,18 @@ const updateUser = async () => {
       delete data.password;
     }
     
+    // 保存标签数据
+    const selectedTags = data.selectedTags || [];
+    delete data.selectedTags;
+    delete data.tags;
+    
     await axios.put(`/api/admin/users/${data.id}`, data);
+    
+    // 单独更新标签
+    await axios.put(`/api/admin/users/${editUserData.value.id}/tags`, {
+      tags: selectedTags
+    });
+    
     await fetchUsers();
     await fetchStats();
     showEditModal.value = false;
@@ -591,7 +842,8 @@ const resetNewUser = () => {
     role: 'user',
     expire_at: '',
     max_profiles: 5,
-    balance: 0
+    balance: 0,
+    selectedTags: []
   };
 };
 
@@ -755,7 +1007,80 @@ onMounted(() => {
   fetchUsers();
   fetchStats();
   fetchAuditLogs();
+  fetchTags();
 });
+
+// --- 标签管理方法 ---
+
+// 打开创建标签弹窗
+const openAddTagModal = () => {
+  isEditingTag.value = false;
+  tagForm.value = { name: '', color: '#6366f1' };
+  showTagModal.value = true;
+};
+
+// 打开编辑标签弹窗
+const editTag = (tag) => {
+  isEditingTag.value = true;
+  tagForm.value = { ...tag };
+  showTagModal.value = true;
+};
+
+// 创建标签
+const createTag = async () => {
+  savingTag.value = true;
+  try {
+    await axios.post('/api/admin/tags', tagForm.value);
+    await fetchTags();
+    showTagModal.value = false;
+    showToast('标签创建成功', 'success');
+  } catch (err) {
+    showToast('创建失败: ' + (err.response?.data?.error || err.message), 'error');
+  } finally {
+    savingTag.value = false;
+  }
+};
+
+// 更新标签
+const updateTag = async () => {
+  savingTag.value = true;
+  try {
+    await axios.put(`/api/admin/tags/${tagForm.value.id}`, tagForm.value);
+    await fetchTags();
+    await fetchUsers(); // 刷新用户列表以更新标签显示
+    showTagModal.value = false;
+    showToast('标签更新成功', 'success');
+  } catch (err) {
+    showToast('更新失败: ' + (err.response?.data?.error || err.message), 'error');
+  } finally {
+    savingTag.value = false;
+  }
+};
+
+// 确认删除标签
+const confirmDeleteTag = (tag) => {
+  tagToDelete.value = tag;
+  showDeleteTagModal.value = true;
+};
+
+// 删除标签
+const deleteTag = async () => {
+  if (!tagToDelete.value) return;
+  
+  deletingTag.value = true;
+  try {
+    await axios.delete(`/api/admin/tags/${tagToDelete.value.id}`);
+    await fetchTags();
+    await fetchUsers(); // 刷新用户列表
+    showDeleteTagModal.value = false;
+    tagToDelete.value = null;
+    showToast('标签删除成功', 'success');
+  } catch (err) {
+    showToast('删除失败: ' + err.message, 'error');
+  } finally {
+    deletingTag.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -1007,6 +1332,190 @@ tr.expiring-soon td {
 
 .username {
   font-weight: 500;
+}
+
+/* 用户标签 */
+.user-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.no-tags {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* 标签筛选 */
+.filter-box {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tag-filter select {
+  width: 150px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* 标签选择器 */
+.tag-selector {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+}
+
+.tag-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.tag-option:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.tag-option.selected {
+  font-weight: 500;
+}
+
+.tag-color-dot-small {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.hidden-checkbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 标签管理视图 */
+.tags-view {
+  height: 100%;
+}
+
+.tags-list {
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.tags-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  padding: 24px;
+}
+
+.tag-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s;
+}
+
+.tag-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.tag-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tag-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.tag-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.tag-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+/* 颜色选择器 */
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.color-option {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+.color-option.selected {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-primary);
+}
+
+.color-check {
+  color: white;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+
+.hidden-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .role-badge {

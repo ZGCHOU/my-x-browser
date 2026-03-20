@@ -219,7 +219,25 @@ app.get('/api/admin/users', authenticate, isAdmin, async (req, res) => {
             LEFT JOIN licenses l ON u.id = l.user_id
             ORDER BY u.id DESC
         `);
-        res.send({ success: true, users: rows });
+        
+        // 获取每个用户的标签
+        const [userTags] = await db.execute(`
+            SELECT ut.user_id, t.id, t.name, t.color
+            FROM user_tags ut
+            JOIN tags t ON ut.tag_id = t.id
+        `);
+        
+        // 将标签关联到用户
+        const usersWithTags = rows.map(user => ({
+            ...user,
+            tags: userTags.filter(ut => ut.user_id === user.id).map(ut => ({
+                id: ut.id,
+                name: ut.name,
+                color: ut.color
+            }))
+        }));
+        
+        res.send({ success: true, users: usersWithTags });
     } catch (e) {
         res.status(500).send({ error: e.message });
     }
@@ -241,7 +259,21 @@ app.get('/api/admin/users/:id', authenticate, isAdmin, async (req, res) => {
             return res.status(404).send({ error: 'User not found' });
         }
         
-        res.send({ success: true, user: rows[0] });
+        // 获取用户标签
+        const [userTags] = await db.execute(`
+            SELECT t.id, t.name, t.color
+            FROM user_tags ut
+            JOIN tags t ON ut.tag_id = t.id
+            WHERE ut.user_id = ?
+        `, [id]);
+        
+        res.send({ 
+            success: true, 
+            user: {
+                ...rows[0],
+                tags: userTags
+            }
+        });
     } catch (e) {
         res.status(500).send({ error: e.message });
     }
@@ -250,7 +282,7 @@ app.get('/api/admin/users/:id', authenticate, isAdmin, async (req, res) => {
 // 5. Admin: Update User
 app.put('/api/admin/users/:id', authenticate, isAdmin, async (req, res) => {
     const { id } = req.params;
-    const { username, password, role, status, expire_at, max_profiles, balance } = req.body;
+    const { username, password, role, status, expire_at, max_profiles, balance, tags } = req.body;
     const clientIp = req.ip || req.connection.remoteAddress;
     
     try {
@@ -348,6 +380,20 @@ app.put('/api/admin/users/:id', authenticate, isAdmin, async (req, res) => {
                     await connection.execute(
                         'INSERT INTO licenses (user_id, expire_at, max_profiles, balance) VALUES (?, ?, ?, ?)',
                         [id, expire_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), max_profiles || 5, balance || 0.00]
+                    );
+                }
+            }
+
+            // 更新用户标签
+            if (tags !== undefined && Array.isArray(tags)) {
+                // 删除原有标签关联
+                await connection.execute('DELETE FROM user_tags WHERE user_id = ?', [id]);
+                
+                // 添加新的标签关联
+                for (const tagId of tags) {
+                    await connection.execute(
+                        'INSERT INTO user_tags (user_id, tag_id) VALUES (?, ?)',
+                        [id, tagId]
                     );
                 }
             }
@@ -622,6 +668,151 @@ app.get('/api/admin/stats', authenticate, isAdmin, async (req, res) => {
                 today_logins: todayLogins[0].count
             }
         });
+    } catch (e) {
+        res.status(500).send({ error: e.message });
+    }
+});
+
+// --- Tags Management APIs ---
+
+// 12. Admin: Get All Tags
+app.get('/api/admin/tags', authenticate, isAdmin, async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT * FROM tags ORDER BY created_at DESC');
+        res.send({ success: true, tags: rows });
+    } catch (e) {
+        res.status(500).send({ error: e.message });
+    }
+});
+
+// 13. Admin: Create Tag
+app.post('/api/admin/tags', authenticate, isAdmin, async (req, res) => {
+    const { name, color } = req.body;
+    const clientIp = req.ip || req.connection.remoteAddress;
+    
+    try {
+        // 检查标签名是否已存在
+        const [existing] = await db.execute('SELECT id FROM tags WHERE name = ?', [name]);
+        if (existing.length > 0) {
+            return res.status(400).send({ error: 'Tag name already exists' });
+        }
+
+        const [result] = await db.execute(
+            'INSERT INTO tags (name, color) VALUES (?, ?)',
+            [name, color || '#6366f1']
+        );
+
+        await logAudit(req.user.id, `创建标签：${name}`, clientIp);
+        res.send({ success: true, message: 'Tag created', tagId: result.insertId });
+    } catch (e) {
+        res.status(500).send({ error: e.message });
+    }
+});
+
+// 14. Admin: Update Tag
+app.put('/api/admin/tags/:id', authenticate, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { name, color } = req.body;
+    const clientIp = req.ip || req.connection.remoteAddress;
+    
+    try {
+        const updates = [];
+        const values = [];
+        
+        if (name) {
+            // 检查新名称是否已存在
+            const [existing] = await db.execute(
+                'SELECT id FROM tags WHERE name = ? AND id != ?',
+                [name, id]
+            );
+            if (existing.length > 0) {
+                return res.status(400).send({ error: 'Tag name already exists' });
+            }
+            updates.push('name = ?');
+            values.push(name);
+        }
+        
+        if (color) {
+            updates.push('color = ?');
+            values.push(color);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).send({ error: 'No fields to update' });
+        }
+
+        values.push(id);
+        await db.execute(
+            `UPDATE tags SET ${updates.join(', ')} WHERE id = ?`,
+            values
+        );
+
+        await logAudit(req.user.id, `更新标签 ID：${id}`, clientIp);
+        res.send({ success: true, message: 'Tag updated' });
+    } catch (e) {
+        res.status(500).send({ error: e.message });
+    }
+});
+
+// 15. Admin: Delete Tag
+app.delete('/api/admin/tags/:id', authenticate, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    const clientIp = req.ip || req.connection.remoteAddress;
+    
+    try {
+        // 删除标签（关联表会自动级联删除）
+        const [result] = await db.execute('DELETE FROM tags WHERE id = ?', [id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).send({ error: 'Tag not found' });
+        }
+
+        await logAudit(req.user.id, `删除标签 ID：${id}`, clientIp);
+        res.send({ success: true, message: 'Tag deleted' });
+    } catch (e) {
+        res.status(500).send({ error: e.message });
+    }
+});
+
+// 16. Admin: Update User Tags Only
+app.put('/api/admin/users/:id/tags', authenticate, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { tags } = req.body;
+    const clientIp = req.ip || req.connection.remoteAddress;
+    
+    try {
+        // 检查用户是否存在
+        const [userRows] = await db.execute('SELECT id FROM users WHERE id = ?', [id]);
+        if (userRows.length === 0) {
+            return res.status(404).send({ error: 'User not found' });
+        }
+
+        const connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        try {
+            // 删除原有标签关联
+            await connection.execute('DELETE FROM user_tags WHERE user_id = ?', [id]);
+            
+            // 添加新的标签关联
+            if (tags && Array.isArray(tags) && tags.length > 0) {
+                for (const tagId of tags) {
+                    await connection.execute(
+                        'INSERT INTO user_tags (user_id, tag_id) VALUES (?, ?)',
+                        [id, tagId]
+                    );
+                }
+            }
+
+            await connection.commit();
+            await logAudit(req.user.id, `更新用户标签 ID：${id}`, clientIp);
+            res.send({ success: true, message: 'User tags updated' });
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
     } catch (e) {
         res.status(500).send({ error: e.message });
     }

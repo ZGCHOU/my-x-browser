@@ -94,7 +94,7 @@ async function checkAuth() {
 
     // Optional: Verify token with backend
     try {
-        const res = await fetch('http://localhost:3000/api/user/status', {
+        const res = await fetch('http://localhost:3001/api/user/status', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -160,7 +160,7 @@ async function handleLogin(event) {
     btn.textContent = '登录中...';
 
     try {
-        const response = await fetch('http://localhost:3000/api/auth/login', {
+        const response = await fetch('http://localhost:3001/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })

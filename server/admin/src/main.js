@@ -14,7 +14,8 @@ import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from
 use([CanvasRenderer, PieChart, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent]);
 
 // 配置axios默认值
-axios.defaults.baseURL = 'http://localhost:3001';
+// 开发环境使用相对路径，通过 Vite 代理；生产环境使用实际地址
+axios.defaults.baseURL = import.meta.env.DEV ? '' : 'http://localhost:3001';
 
 // 请求拦截器 - 自动添加token
 axios.interceptors.request.use(

@@ -31,6 +31,25 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 4. Tags Table (for user categorization)
+CREATE TABLE IF NOT EXISTS tags (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    color VARCHAR(7) DEFAULT '#6366f1',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. User Tags Relationship Table
+CREATE TABLE IF NOT EXISTS user_tags (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    tag_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_tag (user_id, tag_id)
+);
+
 -- INSERT Initial Super Admin (username: admin, password: 123456 - Hash needs verification)
 -- IMPORTANT: Use bcrypt.hash('123456', 10) in your script to generate actual hashed passwords.
 -- For manual SQL insert, we just leave it for now.
